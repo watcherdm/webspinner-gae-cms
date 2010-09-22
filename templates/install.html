@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <title>Installing Webspinner CMS</title>
+    <link href="/css/main.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <h1>Welcome to Webspinner CMS</h1>
+    <p>
+      This page will guide through the setup process to get your website up and running in no time.    
+    </p>
+    <div class="stages">
+      <form action="/install" method="POST">
+        <div class="stage">
+          <h2>What is your website called?</h2>
+          <input type="text" name="site.title" placeholder="The title of the website..." required />
+        </div>
+        <div class="stage">
+          <h2>What is your email address?</h2>
+          <input type="email" name="site.admin" placeholder="you@somewhere.com" required/>
+        </div>
+        <div class="stage">
+          <h2>Please enter your preferred password:</h2>
+          <input type="password" name="site.password" required/>
+        </div>
+        <h2>Click save to go to your new website:</h2>
+        <input type="submit" name="save" value="Save"/>
+      </form>
+    </div>
+  </body>
+</html>

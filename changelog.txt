@@ -1,0 +1,179 @@
+.7.1
+ - sessions: cookie_name, clean_check_percent, integrate_flash added 
+    to __init__() as arguments.
+ - sessions: Added SET_COOKIE_EXPIRES global. When set to true an expiration
+    field is added to the cookie to preserve sessions even after
+    the browser is closed. Set to false, session cookies follow
+    the default behaviour of the browser, which normally deletes
+    the cookie when the browser is closed.
+ - sessions: Added set_cookie_expires to __init__() as an argument.
+ - sessions: CHECK_USER_AGENT and CHECK_IP added to explicitly
+    call whether or not browser user agent and ip should be used to
+    validate session cookies.
+ - sessions: check_user_agent and check_ip added to __init__() as
+    arguments.
+ - sessions: _get_session() modified to remove the gql.count() call for
+    better performance. Also checks for IP as well as User Agent. Both now
+    only check if the appropriate check_ip or check_user_agent are set.
+ - sessions: session_expires argument renamed to session_expire_time to be 
+    consistent with the SESSION_EXPIRE_TIME global
+ - sessions: _validate_sid() removed. It's functionality has been moved
+    to _get_session()
+ - sessions: _set_memcache() changed to always reset the memcache with all
+    information from datastore. Ability to add key => value pairs has been
+    removed.
+ - sessions: get() and put() changed to _get() and _put() to make them
+    private.
+ - sessions: Checks against global variables replaced with the self references
+    to __init__() arguments in order to support them.
+ - sessions: Replaced a lot of separate queries for Session and SessionData with 
+    _get_session() and _get() in order to have duplicated code.
+ - sessions: Demo upgraded to demonstrate iteration.
+ - sessions: self.ds changed to self.session to be more explicit.
+ - sessions: datastore interaction removed from self._new_sid() as it really should just
+    create a session token to be assigned to the model.
+ - sessions: __setitem__() now updates internal cache and memcache
+ - sessions: Models changed to use db.ReferencePropery() in the SessionData model. All relevant
+    methods updated.
+ - sessions: Memcache updated to use the Session.key() for it's identifier.
+ - sessions: session token now changes every request in both the browser and all server
+    side instances in order to add security.
+ - flash: Added an optional argument, cookie, to the initialization so you can pass cookie references to it. This is useful in order to keep cookie modifications consistent between writes.
+ - sessions: _clean_old_sessions() modified to not use db.count(), and also deleted memcache items now. All instances of db.count() removed from sessions.
+ - sessions: Many docstring updates.
+ - sessions: Variable names throughout the class updated to be more consistent.
+ - sessions: added delete_all_sessions()
+ - sessions: A couple changes in if statements to use is instead of == for more standardization
+ - flash: Created a demo page for flash.
+ - sessions: Added SESSION_TOKEN_TTL and a session_token_ttl argument to set how long a session token should remain valid for The default is 10 seconds which appears to be long enough for me to spam the refresh button several times even running the SDK on a slower pc.
+ - sessions: Modified Session.sid to be a StringListProperty() that keeps the current, plus 1 previous session token. This allowed me to drop the TTL to 5 seconds and provide stability through frequent refreshes.
+ - demo: Various text and css updates to the demo application.
+ - sessions: added django middleware, which includes adding testcookie functions
+
+.8
+ - cache: A lot of refactoring, preparing it for use as a drop in cache backend for django.
+ - cache: uses memcache in addition to the datastore
+ - demo: added memcache stats to the demo
+ - demo: updated demo to include deleting a cache object
+ - cache: passed the pep8 test
+ - event: passed the pep8 test
+ - sessions: sessionDelete event changed to sessionDeleted
+ - sessions: sessionInititalized, sessionGetFromDatastore, sessionDataGetFromDatastore, sessionDataPut, sessionDataGetFromMemcache, sessionMemcacheUpdated events added.
+ - cache: cacheInitialized, cacheAdd, cacheSet, cacheReadFromDatastore, cacheReadFromMemcache, cacheRead, cacheDeleted events added.
+
+1.0rc1
+ - demo: upated some of the demo functions to add some more checks for dynamically creating keynames for cache and session
+ - sessions: made some changes to the keyname validation. Instead of erroring on a keyname not being a string, it automatically converts it to a string. It's a requirement for the datastore storage that keynames be strings. in order to index on them, binary storage is not an option.
+ - sessions: bugfix to correct an issue where the argument passed to change the cookie name wasn't working
+ - cache: cacheAdd event renamed to cacheAdded
+ - cache: changed __set__() to use cache.set() instead of cache.add() to be more consistent with standard dictionary use.
+
+ 1.0rc2
+ - session: updated to add cycle_key method in order to help with use with django
+ - demo: added <meta http-equiv="Cache-Control" content="no-cache" /> to the html header for all pages on the site, due to aggressive caching by appengine
+
+ 1.0rc3
+ - cache clean fixed. It wasn't working
+ - renamed appengine_utilities/django to appengine_utilities/django-middleware, solving a conflict with importing django for the flash fix
+ - modified flash to use json instead of pickle for serializing data
+
+ 1.0rc4
+ - flash: wrapped the simplejson.loads() in a try/except to handle when the json sent by the browser does not validate.
+ 1.0
+ No changes, 1.0rc4 renamed to 1.0
+
+ 1.1
+ - cron: added
+ admin interface: a small piece added for cron, will be expanded to support all utilities where applicable
+
+ 1.1.1
+ - session and flash: added no_cache_headers() method that is called whenever either
+        class is loaded. This should stop any problems with browser caching.
+ - ROTModel - new Model class added that retries put operations when db.Timeout is encountered.
+ - sessions and cache: Retuned the cleanup routines default settings. It will happen more often, but will delete less instances, lowering the amount of time required to run the operation in an effort to avoid deadline exceded errors in applications.
+ - session - uses the new ROTModel for both session and session data.
+ - session - rewrote the Cookie handling process to work better with other applications that use the cookies in applications, Google Analytics for example.
+ - cron - Fixed a bug in the form for deleting cron entries.
+ - Project - The 1.1 branch is now the suggested branch to use, 1.0 is being deprecated.
+ 
+ 1.1.2
+ - session: Added last_activity_update variable to set an interval for which last_activity needs to be updated. It defaults to 60 seconds. This means a put is not required every request which should increase performance.
+ - session: Refactored based on a contribution from Jeremy Awon optimizing the class initialization.
+ - session: Bug found in the process to clear old sessions that was deleting data it shouldn't be. This was the cause of the mysterious missing session data bug. Thank you pant.lalit 
+ - session: Bug fixed where clean_check_percent was being ignored.
+ - session: Some tweaks done to delete_all_session(), though this feature shouldn't be considered complete yet. Needs more testing.
+
+1.1.3
+ - session: bugfix to handle str() and len() methods when there is no session data. Issue #12
+ - session: delete_all_sessions changed to a class method. Issue #14 (NOTE: delete_all_sessions is not complete)
+ - session: Modified session token to include the session key. Issue #10
+ - session: Session token encryption changed to md5 from sha1, in order to improve performance as the salt is randomized with a time string.
+
+1.2
+ - Bugfix: session deleting was failing and making it so that an error would
+ be presented on every pageview until cookies were cleared. This is fixed.
+ - sessions.py
+ - Cookie sessions are now in.
+You can now initialize session as Session(writer="cookie") and all session 
+values will be stored in a new cookie within the browser, bypassing the 
+datastore altogether. If you are creating an application that does not need 
+to protect the session data, this will have huge CPU benefits. Another user 
+is to initialize cookie writer sessions for your application's non-logged 
+in users. When the user logs in you can reset the session to the normal 
+datastore backed one.
+
+A new class method check_token() has been created to determine which type of 
+session is available to the user. Session.check_token() will check to see if 
+a session token cookie exists in the users browser, then will determine if it's
+ valid or not. Thus check_token allows you to do something like:
+
+if Session.check_token():
+    session = Session()
+else:
+    session = Session(writer="cookie")
+
+The django middleware has been updated to use this. However, this does mean you
+ have an extra level of management necessary for your login functionality for 
+django now. This has only been tested on appenginepatch with the latest django.
+For example to log in a user you'd want to do something like this:
+
+        user = auth.authenticate(account = id)
+        if user is not None and user.is_active:
+            request.session.save()
+            auth.login(request, user)
+  
+1.2.1
+ - cache - has_key method added
+ - sessions - Bug fix for empty sessions with null values sids being created along with new sessions
+
+1.2.2
+ - cache - now will not error if a write to the datastore fails, continues with just memcache
+ - delete_item() added to session. Can be used to delete items, whether they exist or not
+    and not throw KeyError. Optionally you can call with throw_exception set to True, and it will
+    throw KeyError exceptions, as if you've done a "del session[key]"
+
+1.2.3
+ - added settings_default.py, can be copied to settings.py and modified to set
+   default settings for your application.
+
+1.3rc1
+    - rotmodel - upgraded to fully extend db.Model, retrying on various get/set
+                 datastore operations.
+    - sessions - Major rewrite of sessions, that should be 100% backwards
+                 compatible. Session not only uses rotmodel for gets, but
+                 has it's own wrapper for puts, that will keep state in
+                 memcache past failed datastore writes, and self correct
+                 on future requests.
+    - paginator - introduced a new paginator class, that of this version still
+                 requests a lot of testing. Use at your own risk, will be
+                 finalized by release 1.3
+    - all -      Lots of documenation updates and various other tweaks to
+                 optimize performance. Site documenation updates will be final
+                 for release 1.3
+
+1.4
+ - Dropped ROTModel support throughout the project, as Google has
+    moved that functionality internal to db.Model.
+ - Various documentation updates.
+ - Several bugfixes, issues #10 and #11 resolved.
+

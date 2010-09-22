@@ -1,0 +1,51 @@
+{% extends "_base.html" %}
+{% block headers %}
+  <title>Administrative Test</title>
+  <link href="/css/main.css" rel="stylesheet"/>
+{% endblock %}
+{% block page %}
+  <h1>Welcome to Webspinner CMS</h1>
+  <p>
+    This page will guide through the setup process to get your website up and running in no time.    
+  </p>
+  <a href="{{ logout_url }}">LOGOUT</a>
+  <h2>Manage Theme Packages Here:</h2>
+  <div class='theme_package'>
+    <a href="/admin/add/themepackage">Add New Theme Package</a>
+    <div class='theme'>
+      <pre class='js' contenteditable></pre>
+      <pre class='css' contenteditable></pre>
+      <pre class='html' contenteditable></pre>
+      <a href="/admin/add/images">Add Images to Library</a>
+    </div>
+  </div>
+  <h2>Manage Site Pages Here:</h2>
+  <div class='page'>
+    <a href="/admin/add/page">Add New Page</a>
+    <div class='section'>
+      <a href="/admin/add/section">Add New Section</a>
+      <div class='content' contenteditable>
+        <a href="/admin/add/content">Add New Content</a>
+      </div>
+    </div>
+  </div>
+  <h2>Manage Site Users and Roles Here:</h2>
+  <div class="roles">
+    <h3>Roles:</h3>
+    <a href="/admin/add/role">Add New Role</a>
+    <ul>
+    {% for role in roles %}
+        <li><a href="/admin/edit/role/{{ role.key.id }}">{{ role.name }}</a></li>
+    {% endfor %}
+    </ul>
+  </div>
+  <div class="users">
+    <h3>Users:</h3>
+    <a href="/admin/add/user">Add New User</a>
+    <ul>
+    {% for user in users %}
+      <li><a href="/admin/edit/user/{{ user.key.id }}">{{ user.email }}</a></li>
+    {% endfor %}
+    </ul>
+  </div>
+{% endblock %}
