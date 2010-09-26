@@ -1,6 +1,6 @@
 {% extends "_base.html" %}
 {% block headers %}
-  <title>Administrative Test</title>
+  <title>Administration Panel</title>
   <link href="/css/main.css" rel="stylesheet"/>
   <link href="/addons/markitup/skins/markitup/style.css" rel="stylesheet" type="text/css"/>
   <link href="/addons/markitup/sets/default/style.css" rel="stylesheet" type="text/css"/>
@@ -19,11 +19,11 @@
       <label for="site.title">Site Title: <span class='help'>the title that appears when another title is not set.</span></label><br />
       <input type="text" name="site.title" id="site.title" required value="{{ site.title }}" /><br />
       <label for="site.actions">Site Actions: <span class='help'>actions available to users in this site, will expand as new modules become available.</span></label><br />
-      <input type="text" name="site.actions" id="site.actions" required value="{{ site.actions }}" /><br />
+      <input type="text" name="site.actions" id="site.actions" required value="{{ site.actions_joined }}" /><br />
       <label for="site.keywords">Site Keywords: <span class='help'>keywords used in the metatags and certain key based descriptions of your site.</span></label><br />
-      <input type="text" name="site.keywords" id="site.keywords" required value="{{ site.keywords }}" /><br />
-      <label for="site.tags.join|','">Site Tags: <span class='help'>tags available to taggable items in the website.</span></label><br />
-      <input type="text" name="site.tags" id="site.tags" required value="{{ site.tags }}" /><br />
+      <input type="text" name="site.keywords" id="site.keywords" required value="{{ site.keywords_joined }}" /><br />
+      <label for="site.tags">Site Tags: <span class='help'>tags available to taggable items in the website.</span></label><br />
+      <input type="text" name="site.tags" id="site.tags" required value="{{ site.tags_joined }}" /><br />
       <label for="site.description">Site Description: <span class='help'>the website description used for search engines and other transmissions.</span></label><br />
       <textarea name="site.description" id="site.description">{{ site.description }}</textarea>
       <input type="submit" id="site.submit" name="site.submit" value="Update Site"/>
@@ -31,8 +31,14 @@
   </div>
   <h2>Manage Theme Packages Here:</h2>
   <div class='theme_package'>
+    {% for theme_package in theme_packages %}
+      <a href="/admin/edit/theme_package/{{ theme_package.key }}">{{ theme_package.name }}</a><br />
+    {% endfor %}
     <a href="/admin/add/themepackage">Add New Theme Package</a>
     <div class='theme'>
+      {% for theme in themes %}
+        <a href="/admin/edit/theme/{{ theme.key }}">{{ theme.name }}</a><br />
+      {% endfor %}
       <a href="/admin/add/theme">Add New Theme</a>
       <form action="/admin/add/theme" method="POST">
         <label for="theme.name">Theme Name: <span class='help'>the name should help explain its place in the package, eg. "BlueGradient_Section"</span></label><br />
@@ -45,6 +51,9 @@
         <textarea id='theme.html' name="theme.html"></textarea><br />
         <input type="submit" name="theme.submit" id="theme.submit" value="Save Theme"/>
       </form>
+      {% for image in images %}
+        <a href="/admin/edit/image/{{ image.key }}"><img src="/images/{{ image.name }}/s" /></a><br />
+      {% endfor %}
       <a href="/admin/add/image">Add Images to Library</a>
       <form action="/admin/add/image" enctype="form/multipart" method="POST">
         <label for="image.file">Image File: <span class='help'>the image file to store and display.</span></label><br/>
@@ -98,11 +107,18 @@
       <input type="checkbox" name="page.visible" id="page.visible" /><br />
       <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
       <input type="text" name="page.tags" id="page.tags" /><br />
+      <input type="hidden" name="page.site" id="page.site" value="{{ site.key }}"/>
       <input type="submit" name="page.submit" id="page.submit" />
     </form>
     <div class='section'>
+      {% for section in sections %}
+        <a href="/admin/edit/section/{{ section.key }}">{{ section.name }}</a><br />
+      {% endfor %}
       <a href="/admin/add/section">Add New Section</a>
-      <div class='content' contenteditable>
+      <div class='content'>
+        {% for content in contents %}
+          <a href="/admin/edit/content/{{ content.key }}">{{ content.date_modified }}</a>: {{ content.content }}<br />
+        {% endfor %}
         <a href="/admin/add/content">Add New Content</a>
       </div>
     </div>
@@ -126,6 +142,13 @@
     {% endfor %}
     </ul>
   </div>
+  <a href="/admin/download/site/{{ site.key }}/json">Download Site Export in JSON</a><br />
+  <a href="/admin/download/site/{{ site.key }}/xml">Download Site Export in XML</a><br />
+  <form action="/admin/upload/site" method="POST" enctype="form/multipart">
+    <label for="site.import">Import Site from File: <span class='help'>you can upload an exported JSON or XML file of another site make multiple copies or edit, also great for setting up the site in one place and deploying it to another</span></label><br />
+    <input type="file" name="site.import" id="site.import" required /><br />
+    <input type="submit" name="site.import.submit" id="site.import.submit" value="Import Site" />    
+  </form>
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
   <script src="/addons/markitup/jquery.markitup.js" type="text/javascript"></script>
   <script src="/addons/markitup/sets/default/set.js" type="text/javascript"></script>

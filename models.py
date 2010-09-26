@@ -45,6 +45,15 @@ class Site(ROTModel):
     Role.create_default()
     Role.add_administrator(admin)
     return site
+  def actions_joined(self):
+    return ", ".join(self.actions)
+  def tags_joined(self):
+    return ", ".join(self.tags)
+  def keywords_joined(self):
+    return ", ".join(self.keywords)
+  @classmethod
+  def export(cls, key, format):
+    site = cls.get(key)
     
   
 class Role(ROTModel):
@@ -160,6 +169,7 @@ class Page(ROTModel):
     page.visible = (dict_values['visible'] != "")
     page.tags = dict_values['tags']
     page.page_chain.append(dict_values["name"])
+    page.site = db.get(dict_values["site"])
     page.put()
     return page
   @classmethod
@@ -194,7 +204,7 @@ class Page(ROTModel):
     result = []
     for section in sections:
       is_section = Section.get_by_name(section)
-      if is_section:
+      if is_section and is_section.page == self:
         result.append(is_section)
       else:
         is_section = Section()
@@ -227,11 +237,27 @@ class Section(ROTModel):
       return result[0]
     else:
       return None
+
+  def add_content(self, content, abstract, user, tags):
+    content_object = Content()
+    content_object.section = self
+    content_object.abstract = abstract
+    content_object.content = content
+    content_object.created_by_user = user
+    content_object.tags = string_to_tags(self.site, tags)
+    content_object.permissions = self.permissions
+    content_object.visible = self.visible
+    content_object.put()
+    self.contents.append(content_object.key)
+    self.put()
+    return content_object
+    
   def contents_by(self, method):
     contents = db.get(self.contents)
     return contents
   def contents_by_created(self):
     return self.contents_by("-date_created")
+
 class Content(ROTModel):
   """ Content is a wrapper class for the content elements in a section.  
   """

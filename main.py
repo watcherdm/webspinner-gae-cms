@@ -82,8 +82,8 @@ class Webspinner():
       return "/login?return_url=%s" % return_page
     @classmethod
     def create_logout_url(ws, return_page):
-      return "/logout?return_url=%s" %return_page
-
+      return "/logout?return_url=%s" %return_page  
+ 
 class Handler(webapp.RequestHandler):
   def __init__(self):
     self.ws = Webspinner()
@@ -97,6 +97,19 @@ class Handler(webapp.RequestHandler):
   def render_string_out(self, template_object, template_values):
     context = template.Context(template_values)
     self.response.out.write(template_object.render(context))
+
+def admin(handler_method):
+  def redirect_if_needed(self, *args, **kwargs):
+    user = self.ws.users.get_current_user(self)
+    if user == None:
+      self.redirect(self.ws.users.create_login_url('/admin'))
+    else:
+      is_admin = self.ws.users.is_current_user_admin(self)
+      if(is_admin):
+        handler_method(self, *args, **kwargs)
+      else:
+        self.redirect("/")
+  return redirect_if_needed
 
 class GetPage(Handler):
   def get(self):
@@ -176,23 +189,19 @@ class Logout(Handler):
     self.redirect(self.request.get("return_url"))
 
 class Administrate(Handler):
+  @admin
   def get(self):
-    user = self.ws.users.get_current_user(self)
-    if user == None:
-      self.redirect(self.ws.users.create_login_url('/admin'))
-    else:
-      is_admin = self.ws.users.is_current_user_admin(self)
-      if(is_admin):
-        theme_packages = ThemePackage.all().fetch(100)
-        themes = Theme.all().fetch(100)
-        pages = Page.all().fetch(100)
-        roles = Role.all().fetch(100)
-        actions = ACTIONS
-        _users = User.all().fetch(100)
-        template_values = {'logout_url':self.ws.users.create_logout_url('/'),'theme_packages': theme_packages,'themes': themes, 'pages': pages, 'roles':roles, 'users':_users, 'actions': actions, 'site': self.ws.site}
-        self.response.out.write(template.render('templates/manage.html',template_values))
-      else:
-        self.redirect("/")
+    contents = Content.all().fetch(1000)
+    theme_packages = ThemePackage.all().fetch(1000)
+    themes = Theme.all().fetch(1000)
+    pages = Page.all().fetch(1000)
+    images = Image.all().fetch(1000)
+    roles = Role.all().fetch(1000)
+    sections = Section.all().fetch(1000)
+    _users = User.all().fetch(1000)
+    actions = ACTIONS
+    template_values = {'logout_url':self.ws.users.create_logout_url('/'),'theme_packages': theme_packages,'themes': themes, 'images': images, 'pages': pages, 'contents':contents, 'roles':roles, 'users':_users, 'actions': actions, 'sections': sections, 'site': self.ws.site}
+    self.response.out.write(template.render('templates/manage.html',template_values))
 
 class ImageHandler(Handler):
   def get(self):
@@ -205,12 +214,14 @@ class ImageHandler(Handler):
       self.json_out({"name": name})
 
 class AddItem(Handler):
+  @admin
   def get(self, type):
     if type.capitalize() in globals():
       cls = globals()[type.capialize()]
       if cls:
         fields = cls().properties()
         self.render_out("form.html", fields)
+  @admin
   def post(self, type):
     if type.capitalize() in globals():
       cls = globals()[type.capitalize()]
@@ -230,8 +241,35 @@ class AddItem(Handler):
         self.response.out.write(self.request)
       #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
+class EditItem(Handler):
+  @admin
+  def get(self, args):
+    type = args.split("/")[0]
+    key = args.split("/")[1]
+    self.response.out.write(type + " : " + key)
+
+class DeleteItem(Handler):
+  @admin
+  def get(self, args):
+    type = args.split("/")[0]
+    key = args.split("/")[1]
+    self.response.out.write(type + " : " + key)
+
+class ExportItem(Handler):
+  @admin
+  def get(self, args):
+    array_args = args.split("/")
+    type = array_args[0]
+    key = array_args[1]
+    format = array_args[2]
+    self.response.out.write(type + " : " + key + " : " + format)
+    
+
 ROUTES = [('/admin', Administrate),
                     ('/admin/add/(.+)', AddItem),
+                    ('/admin/edit/(.+)', EditItem),
+                    ('/admin/delete/(.+)', DeleteItem),
+                    ('/admin/download/(.+)', ExportItem),
                     ('/login', Login),
                     ('/logout', Logout),
                     ('/install', Install),
