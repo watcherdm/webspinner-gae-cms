@@ -2,6 +2,8 @@
 {% block headers %}
   <title>Administrative Test</title>
   <link href="/css/main.css" rel="stylesheet"/>
+  <link href="/addons/markitup/skins/markitup/style.css" rel="stylesheet" type="text/css"/>
+  <link href="/addons/markitup/sets/default/style.css" rel="stylesheet" type="text/css"/>
 {% endblock %}
 {% block page %}
   <h1>Welcome to Webspinner CMS</h1>
@@ -9,19 +11,95 @@
     This page will guide through the setup process to get your website up and running in no time.    
   </p>
   <a href="{{ logout_url }}">LOGOUT</a>
+  <h2>Manage Site Data Here:</h2>
+  <div class="site_data">
+    <form action="/admin/edit/site/{{ site.id }}" method="POST">
+      <label for="site.admin">Site Administrators Email: <span class='help'>the email of the administrative user, used to send alerts.</span></label><br/>
+      <input type="email" name="site.admin" id="site.admin" required value="{{ site.admin }}" /><br/>
+      <label for="site.title">Site Title: <span class='help'>the title that appears when another title is not set.</span></label><br />
+      <input type="text" name="site.title" id="site.title" required value="{{ site.title }}" /><br />
+      <label for="site.actions">Site Actions: <span class='help'>actions available to users in this site, will expand as new modules become available.</span></label><br />
+      <input type="text" name="site.actions" id="site.actions" required value="{{ site.actions }}" /><br />
+      <label for="site.keywords">Site Keywords: <span class='help'>keywords used in the metatags and certain key based descriptions of your site.</span></label><br />
+      <input type="text" name="site.keywords" id="site.keywords" required value="{{ site.keywords }}" /><br />
+      <label for="site.tags.join|','">Site Tags: <span class='help'>tags available to taggable items in the website.</span></label><br />
+      <input type="text" name="site.tags" id="site.tags" required value="{{ site.tags }}" /><br />
+      <label for="site.description">Site Description: <span class='help'>the website description used for search engines and other transmissions.</span></label><br />
+      <textarea name="site.description" id="site.description">{{ site.description }}</textarea>
+      <input type="submit" id="site.submit" name="site.submit" value="Update Site"/>
+    </form>
+  </div>
   <h2>Manage Theme Packages Here:</h2>
   <div class='theme_package'>
     <a href="/admin/add/themepackage">Add New Theme Package</a>
     <div class='theme'>
-      <pre class='js' contenteditable></pre>
-      <pre class='css' contenteditable></pre>
-      <pre class='html' contenteditable></pre>
-      <a href="/admin/add/images">Add Images to Library</a>
+      <a href="/admin/add/theme">Add New Theme</a>
+      <form action="/admin/add/theme" method="POST">
+        <label for="theme.name">Theme Name: <span class='help'>the name should help explain its place in the package, eg. "BlueGradient_Section"</span></label><br />
+        <input type="text" name="theme.name" id="theme.name"/><br />
+        <label for="theme.js">JavaScript:</label>
+        <textarea id='theme.js' name="theme.js"></textarea><br />
+        <label for="theme.js">CSS:</label>
+        <textarea id='theme.css' name="theme.css"></textarea><br />
+        <label for="theme.js">HTML:</label>
+        <textarea id='theme.html' name="theme.html"></textarea><br />
+        <input type="submit" name="theme.submit" id="theme.submit" value="Save Theme"/>
+      </form>
+      <a href="/admin/add/image">Add Images to Library</a>
+      <form action="/admin/add/image" enctype="form/multipart" method="POST">
+        <label for="image.file">Image File: <span class='help'>the image file to store and display.</span></label><br/>
+        <input type="file" name="image.file" id="image.file" required /><br/>
+        <label for="image.title">Image Title: <span class='help'>the title that will be used when referring to the image in themes.</span></label><br />
+        <input type="text" name="image.title" id="image.title" /><br/>
+        <label for="image.tags">Image Tags: <span class='help'>the tags associated with this image.</span></label><br/>
+        <input type="text" name="image.tags" id="image.tags" /><br/>
+        <input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
+      </form>
     </div>
   </div>
   <h2>Manage Site Pages Here:</h2>
   <div class='page'>
+    {% for page in pages %}
+      <a href="/admin/edit/page/{{ page.key }}">{{ page.name }} : {{ page.title }}</a><br />
+    {% endfor %}
     <a href="/admin/add/page">Add New Page</a>
+    <form action="/admin/add/page" method="POST">
+      <label for="page.name">Page Name: <span class='help'>how it appears in the url</span></label><br />
+      <input type="text" id="page.name" name="page.name" required /><br />
+      <label for="page.ancestor">Parent Page: <span class='help'>which page this will appear under in the menu, if any.</span></label><br />
+      <select name="page.ancestor" id="page.ancestor">
+        <option value="None">-- None --</option>
+      {% for page in pages %}
+        <option value="{{ page.key }}">{{ page.title }}</option>
+      {% endfor %}
+      </select><br />
+      <label for="page.title">Page Title: <span class='help'>the title of the page shows in the browser title or tab title.</span></label><br />
+      <input type="text" name="page.title" id="page.title" required /><br />
+      <label for="page.menu_name">Page Menu Name: <span class='help'>the name to appear in the menu listing.</span></label><br />
+      <input type="text" name="page.menu_name" id="page.menu_name" required /><br />
+      <div class="permissions_settings">
+        <ul>
+          <li><span class='head'>Role</span>
+          {% for action in actions %}
+            <span class='head'>{{ action }}</span>
+          {% endfor %}
+          </li>
+        {% for role in roles %}
+          <li>
+            <span class='head'>{{ role.name }}</span>
+            {% for action in actions %}
+              <span><input type="checkbox" name="permission.{{ role.name }}.{{ action }}" id="permission.{{ role.name }}.{{ action }}"/></span>
+            {% endfor %}
+          </li>
+        {% endfor %}
+        </ul>
+      </div>
+      <label for="page.visibile">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
+      <input type="checkbox" name="page.visible" id="page.visible" /><br />
+      <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
+      <input type="text" name="page.tags" id="page.tags" /><br />
+      <input type="submit" name="page.submit" id="page.submit" />
+    </form>
     <div class='section'>
       <a href="/admin/add/section">Add New Section</a>
       <div class='content' contenteditable>
@@ -48,4 +126,12 @@
     {% endfor %}
     </ul>
   </div>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript"></script>
+  <script src="/addons/markitup/jquery.markitup.js" type="text/javascript"></script>
+  <script src="/addons/markitup/sets/default/set.js" type="text/javascript"></script>
+  <script type="text/javascript">
+  $(function(){
+    $("textarea").markItUp(mySettings);
+  })
+ </script>
 {% endblock %}

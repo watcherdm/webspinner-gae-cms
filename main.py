@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2008, appengine-utilities project
+Copyright (c) 2010, Webspinner CMS
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -20,13 +20,12 @@ from appengine_utilities import event
 from appengine_utilities import cache
 from appengine_utilities.rotmodel import ROTModel
 import wsgiref.handlers
-import StringIO
 from google.appengine.ext import webapp
 from google.appengine.api import memcache, users
 from google.appengine.ext import db
 from django.utils import simplejson
 import hashlib
-
+import re
 from models import *
 
 class Webspinner():
@@ -95,6 +94,9 @@ class Handler(webapp.RequestHandler):
     self.response.out.write(simplejson.dumps(data))
   def render_out(self, template_file, values = {}):
     self.response.out.write(template.render(template_file,values))
+  def render_string_out(self, template_object, template_values):
+    context = template.Context(template_values)
+    self.response.out.write(template_object.render(context))
 
 class GetPage(Handler):
   def get(self):
@@ -103,7 +105,8 @@ class GetPage(Handler):
       return False
     path = self.request.path
     query_string = self.request.query_string
-    page_chain = path.split('/')
+    #print path
+    page_chain = path
     query_chain = query_string.split("&")
     def kv_q(x):
       x = x.split('=')
@@ -111,10 +114,17 @@ class GetPage(Handler):
         return x[0]
       return {x[0]: x[1]}
     query_chain_kv = map(kv_q, query_chain)
-    str_template = template.Template("""<html>
-      <body>{{ get }}</body>
-    </html>""")
-    self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
+    page = Page.get_by_page_chain(page_chain)
+    if page:
+      page_theme = page.theme
+      #print page.build_template()
+      page_html = "<title>%s</title><style>%s</style><script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>%s" % (page.title, page_theme.css, page_theme.js, page.build_template())
+      page_template = template.Template(page_html)
+      template_values = {"page": page, "sections": page.sections()}
+      self.render_string_out(page_template, template_values)
+    else:
+      self.error(404) #self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
+
 class Install(Handler):
 
   def get(self):
@@ -159,7 +169,12 @@ class Login(Handler):
     else:
       self.session.delete_item("user")
       self.redirect(self.request.get("return_url"))
- 
+
+class Logout(Handler):
+  def get(self):
+    self.session.delete_item("user")
+    self.redirect(self.request.get("return_url"))
+
 class Administrate(Handler):
   def get(self):
     user = self.ws.users.get_current_user(self)
@@ -169,26 +184,56 @@ class Administrate(Handler):
       is_admin = self.ws.users.is_current_user_admin(self)
       if(is_admin):
         theme_packages = ThemePackage.all().fetch(100)
+        themes = Theme.all().fetch(100)
         pages = Page.all().fetch(100)
         roles = Role.all().fetch(100)
+        actions = ACTIONS
         _users = User.all().fetch(100)
-        template_values = {'logout_url':users.create_logout_url('/'),'theme_packages': theme_packages,'pages': pages, 'roles':roles, 'users':_users}
+        template_values = {'logout_url':self.ws.users.create_logout_url('/'),'theme_packages': theme_packages,'themes': themes, 'pages': pages, 'roles':roles, 'users':_users, 'actions': actions, 'site': self.ws.site}
         self.response.out.write(template.render('templates/manage.html',template_values))
       else:
         self.redirect("/")
 
 class ImageHandler(Handler):
   def get(self):
-    id = self.request.path.split('/')[3]
-    image = Image.get_by_id(id).fetch(1)
+    name = self.request.path.split('/')[2]
+    image = Image.get_by_name(name)
     if image and image.file:
-      self.response.headers['Content-Type'] = 'img/png'
+      self.response.headers['Content-Type'] = 'image/JPEG'
       self.response.out.write(image.file)
     else:
-      self.redirect('/static/noimage.png')
+      self.json_out({"name": name})
+
+class AddItem(Handler):
+  def get(self, type):
+    if type.capitalize() in globals():
+      cls = globals()[type.capialize()]
+      if cls:
+        fields = cls().properties()
+        self.render_out("form.html", fields)
+  def post(self, type):
+    if type.capitalize() in globals():
+      cls = globals()[type.capitalize()]
+      if cls:
+        #self.response.out.write(dir(cls))
+        values = {}
+        for k in self.request.arguments():
+          value = self.request.get(k)
+          if k.split('.')[-1] in cls().properties() and "List" in cls().properties()[k.split('.')[-1]].__class__().__str__():
+            values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
+          else:
+            values[k.split('.')[-1]] = value
+        values[k] = self.request.get(k)
+        result = cls.create(values)
+        self.response.out.write(values)
+      else:
+        self.response.out.write(self.request)
+      #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
 ROUTES = [('/admin', Administrate),
+                    ('/admin/add/(.+)', AddItem),
                     ('/login', Login),
+                    ('/logout', Logout),
                     ('/install', Install),
                     ('/images/.*/[sbtl]', ImageHandler),
                     ('/.*', GetPage),]

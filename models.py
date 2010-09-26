@@ -11,8 +11,15 @@ from google.appengine.ext import db
 from django.utils import simplejson
 from hashlib import sha256
 from random import random
+import re
 
 ACTIONS = ['view','edit']
+
+def string_to_tags(site, tags):
+  result = list(set([x.lstrip().rstrip() for x in tags.split(",")]))
+  site.tags.extend(result)
+  site.put()
+  return result
 
 class Site(ROTModel):
   """ Site is a wrapper class for all the site data."""
@@ -114,6 +121,15 @@ class Theme(ROTModel):
   html = db.TextProperty()
   css = db.TextProperty()
   js = db.TextProperty()
+  @classmethod
+  def create(cls, dict_values):
+    theme = cls()
+    theme.name = dict_values["name"]
+    theme.html = dict_values["html"]
+    theme.css = dict_values["css"]
+    theme.js = dict_values["js"]
+    theme.put()
+    return theme
 
 class Page(ROTModel):
   """ Page is a wrapper class for each logical page in the cms website
@@ -129,6 +145,68 @@ class Page(ROTModel):
   visible = db.BooleanProperty()
   tags = db.StringListProperty()
   page_chain = db.StringListProperty()
+  @classmethod
+  def create(cls, dict_values):
+    page = cls()
+    page.name = dict_values['name']
+    print 'ancestor' in dict_values
+    if not dict_values['ancestor'] == "None":
+      anc = Page.get_by_id(long(dict_values['ancestor']))
+      page.ancestor = anc
+    else:
+      page.ancestor = None
+    page.title = dict_values['title']
+    page.menu_name = dict_values['menu_name']
+    page.visible = (dict_values['visible'] != "")
+    page.tags = dict_values['tags']
+    page.page_chain.append(dict_values["name"])
+    page.put()
+    return page
+  @classmethod
+  def get_by_name(cls, name):
+    return cls.all().filter("name", name).fetch(1)[0]
+  @classmethod
+  def get_by_page_chain(cls, page_chain):
+    result = cls.all().filter("page_chain", page_chain).fetch(1)
+    if len(result) > 0:
+      return  result[0]
+    else:
+      return None
+  def sections(self):
+    result = {}
+    for panel in self.panels:
+      section = Section.get_by_name(panel)
+      result[panel] = section
+    return result
+  def build_template(self):
+    page_html = self.theme.html
+    for panel in self.panels:
+      section = Section.get_by_name(panel)
+      blocks_expression = '{%% block %s %%}{%% endblock %%}' % panel
+      page_html = re.sub(blocks_expression, section.theme.html, page_html)
+    return page_html
+      
+  def get_or_make_sections(self):
+    blocks_expression = '{% block (section_[a-z]+) %}{% endblock %}'
+    sections = re.findall(blocks_expression, self.theme.html)
+    self.panels = sections
+    self.put()
+    result = []
+    for section in sections:
+      is_section = Section.get_by_name(section)
+      if is_section:
+        result.append(is_section)
+      else:
+        is_section = Section()
+        is_section.name = section
+        is_section.page = self
+        is_section.panel = section
+        is_section.permissions = self.permissions
+        is_section.visible = self.visible
+        is_section.tags = self.tags
+        is_section.put()
+        result.append(is_section)
+    return result
 
 class Section(ROTModel):
   """ Section is a wrapper class for the each logical section in a page.
@@ -140,8 +218,20 @@ class Section(ROTModel):
   panel = db.StringProperty()
   permissions = db.ListProperty(db.Key)
   visible = db.BooleanProperty()
+  contents = db.ListProperty(db.Key)
   tags = db.StringListProperty()
-
+  @classmethod
+  def get_by_name(cls, name):
+    result = cls.all().filter("name", name).fetch(1)
+    if len(result) > 0:
+      return result[0]
+    else:
+      return None
+  def contents_by(self, method):
+    contents = db.get(self.contents)
+    return contents
+  def contents_by_created(self):
+    return self.contents_by("-date_created")
 class Content(ROTModel):
   """ Content is a wrapper class for the content elements in a section.  
   """
@@ -161,4 +251,15 @@ class Image(ROTModel):
   title = db.StringProperty()
   name = db.StringProperty()
   tags = db.StringListProperty()
-
+  @classmethod
+  def get_by_name(cls, name):
+    return cls.all().filter("name =", str(name)).fetch(1)[0]
+  @classmethod
+  def create(cls, dict_values):
+    img = cls()
+    img.file = dict_values["file"]
+    img.title = dict_values["title"]
+    img.name = str(random()).split('.')[-1]
+    img.tags = dict_values['tags']
+    img.put()
+    return img

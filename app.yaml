@@ -4,8 +4,16 @@ runtime: python
 api_version: 1
 
 handlers:
+
+- url: /remote_api
+  script: $PYTHON_LIB/google/appengine/ext/remote_api/handler.py
+  login: admin
+
 - url: /css
   static_dir: css
+
+- url: /addons
+  static_dir: addons
 
 - url: /gaeutilities/css
   static_dir: appengine_utilities/interface/css

@@ -18,3 +18,10 @@ class TestSiteModel(unittest.TestCase):
   def test_title_works(self):
     site = Site.all().get()
     self.assertTrue('Test Website' == site.title)
+class TestPageMode(unittest.TestCase):
+  def setUp(self):
+    page = Page()
+    
+  def test_tags_exist(self):
+    page = Page.all().get()
+    self.assertTrue([] == page.tags

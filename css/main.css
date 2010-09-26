@@ -1,3 +1,8 @@
 body{background: rgba(0,0,0,.1); font-family: Helvetica;}
 input{font-size: 150%; border-radius: 20px; width: 600px;padding: 10px;}
 input:invalid{background: rgba(255, 0, 0, .2);}
+.permissions_settings {clear: both;}
+.permissions_settings ul li{display: block; width: 600px; height: 20px;}
+.permissions_settings ul li span{width: 200px; display: block; float: left; text-align: center;}
+.permissions_settings ul li span input{width: 200px;}
+span.head {font-weight: bold; text-align: left;}
