@@ -214,6 +214,21 @@ class Theme(ROTModel):
     theme.js = dict_values["js"]
     theme.put()
     return theme
+  @classmethod
+  def update(cls, dict_values):
+    theme = cls.get(dict_values["key"])
+    if theme:
+      theme.html = dict_values["html"]
+      theme.css = dict_values["css"]
+      theme.js = dict_values["js"]
+      theme.put()
+      pages = Page.all().filter("theme", theme).fetch(1000)
+      for page in pages:
+        sections = page.get_or_make_sections()
+      return theme
+    else:
+      return None
+    
 
 class Page(ROTModel):
   """ Page is a wrapper class for each logical page in the cms website
@@ -271,8 +286,9 @@ class Page(ROTModel):
     result = []
     for section in sections:
       is_section = Section.get_by_name(section)
-      if is_section and is_section.page == self:
-        self.sections.append(is_section.key())
+      if is_section:
+        if not is_section.key() in self.sections:
+          self.sections.append(is_section.key())
         result.append(is_section)
       else:
         is_section = Section.create({"page":self.key(), "name": section})
@@ -300,7 +316,7 @@ class Section(ROTModel):
     section.tags = page.tags
     section.theme = Theme.create({"name":"default_section", "html":"""
 <div class="%s">
-  {%% for content in page.sections.dict.%s.contents_by_date %%}
+  {%% for content in sections.%s.contents_by_date %%}
     {{ content.content }}
   {%% endfor %%}
 </div>
@@ -309,6 +325,7 @@ class Section(ROTModel):
     for theme_package in theme_packages:
       if page.theme.key() in theme_package.themes:
         theme_package.themes.append(section.theme.key())
+        theme_package.put()
     section.add_content("Hello World!", "hi there")
     return section
     

@@ -129,49 +129,66 @@ class GetPage(Handler):
       return {x[0]: x[1]}
     query_chain_kv = map(kv_q, query_chain)
     page = Page.get_by_page_chain(page_chain)
+    admin_html = []
     if page:
       user = self.ws.users.get_current_user(self)
       if user:
         user_control = self.ws.users.create_logout_url(path)
         user_label = "Logout"
         if self.ws.users.is_current_user_admin(self):
-          admin_html = ["""<div class="admin page_theme_html">
-            <form action="/admin/edit/theme/%s" method="POST">
+          admin_html = ["<div class='admin_tools'>", """<span class="admin_page_tab">Admin Page<div class="admin page_theme_html">
+            <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
               <textarea name="page.theme.html" id="page.theme.html">%s</textarea>
               <textarea name="page.theme.css" id="page.theme.css">%s</textarea>
               <textarea name="page.theme.js" id="page.theme.js">%s</textarea>
               <input type="submit" name="page.theme.submit" value="Save Changes"/>
             </form>
-          </div>""" % (page.theme.key(), page.theme.html, page.theme.css, page.theme.js),]
+          </div></span>""" % (page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js),]
+          s = 0
+          c = 0
           for section in db.get(page.sections):
-            admin_html.append("""<div class="admin section_theme_html">
-              <form action="/admin/edit/theme/%s" method="POST">
+            admin_html.append("""<span class="admin_section_tab">Admin Section %d<div class="admin section_theme_html">
+              <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
                 <textarea name="section.theme.html" id="section.theme.html">%s</textarea>
                 <textarea name="section.theme.css" id="section.theme.css">%s</textarea>
                 <textarea name="section.theme.js" id="section.theme.js">%s</textarea>
                 <input type="submit" name="section.theme.submit" value="Save Changes"/>
               </form>
-            </div>""" % (section.theme.key(), section.theme.html, section.theme.css, section.theme.js))
+            </div></span>""" % (s, section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
+            s += 1
             for content in db.get(section.contents):
-              admin_html.append("""<div class="admin content.edit">
-                <form action="/admin/edit/content/%s" method="POST">
+              admin_html.append("""<span class="admin_content_tab">Admin Content %d<div class="admin content.edit">
+                <form action="/admin/edit/content/%s?return_url=%s" method="POST">
                   <textarea name="content.content" id="content.content">%s</textarea>
                   <input type="submit" name="content.submit" id="content.submit" value="Save Changes" />
                 </form>
-              </div>""" % (content.key(), content.content))
+              </div></span>""" % (c, content.key(),self.request.path,  content.content))
+              c += 1
+          admin_html.append("""<style>div.admin {display: none; position: absolute; height: 480px; width: 640px; background: #333; left: 300px; top: 20px; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);}
+          div.admin textarea{width: 630px; height: 140px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
+          div.admin_tools {position: fixed; top: 10px left: 0px; text-align: left;}
+          div.admin_tools span {position: relative;left: 0px;padding: 6px; display: block; height: 20px; width: 150px; background: #333; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8); color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8); font-weight: bolder;margin-left: -15px; margin-top: 10px;}
+          </style>""")
+          admin_html.append("""<script type="text/javascript">
+            $(function(){
+              $("div.admin_tools").find("span").toggle(function(){$(this).find("div").show()}, function(){$(this).find("div").hide()});
+              $("div.admin_tools").find("span div").click(function(){return false;}).find("form>input[type=submit]").click(function(){$(this).parent("form").submit();});
+            })
+          </script>""")
+          admin_html.append("</div>")
       else:
         user_control = self.ws.users.create_login_url(path)
         user_label = "Login"
       page_theme = page.theme
       #print page.build_template()
-      page_html = "<html><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>%s</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js, "".join(admin_html))
+      page_html = "<html><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>{{ admin_content }}</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js)
       page_template = template.Template(page_html)
       sections = db.get(page.sections)
       section_dict = {}
       for section in sections:
         section_dict[section.name] =  section
       user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
-      template_values = {"ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link}
+      template_values = {"ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link, 'admin_content': "".join(admin_html)}
       self.render_string_out(page_template, template_values)
     else:
       self.error(404) #self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
@@ -307,9 +324,12 @@ class EditItem(Handler):
             values[k.split('.')[-1]] = value
           values[k] = self.request.get(k)
         result = cls.update(values)
-        self.response.out.write(values)
+        if result:
+          self.redirect(self.request.get("return_url"))
+        else:
+          self.response.out.write("Failed to update")
       else:
-        self.response.out.write(self.request)
+        self.response.out.write(self.request.get("return_url"))
           
 
 class DeleteItem(Handler):
