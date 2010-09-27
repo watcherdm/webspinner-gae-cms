@@ -13,6 +13,40 @@ from hashlib import sha256
 from random import random
 import re
 
+import datetime
+import time
+
+SIMPLE_TYPES = (int, long, float, bool, dict, basestring)
+
+def to_dict(model):
+  output = {}
+
+  for key, prop in model.properties().iteritems():
+    value = getattr(model, key)
+
+    if value is None or isinstance(value, SIMPLE_TYPES):
+      output[key] = value
+    elif isinstance(value, datetime.date):
+        # Convert date/datetime to ms-since-epoch ("new Date()").
+      ms = time.mktime(value.utctimetuple()) * 1000
+      ms += getattr(value, 'microseconds', 0) / 1000
+      output[key] = int(ms)
+    elif isinstance(value, list):
+      if len(value) < 1 or isinstance(value[0], SIMPLE_TYPES):
+        output[key] = value
+      else:
+        sublist = []
+        for v in value:
+          m = db.get(v)
+          sublist.append(to_dict(m))
+        output[key] = sublist
+    elif isinstance(value, db.Model):
+      output[key] = to_dict(value)
+    else:
+      raise ValueError('cannot encode ' + repr(prop))
+
+  return output
+
 ACTIONS = ['view','edit']
 
 def string_to_tags(site, tags):
@@ -30,6 +64,9 @@ class Site(ROTModel):
   keywords = db.StringListProperty()
   tags = db.StringListProperty()
   secret = db.StringProperty()
+  pages = db.ListProperty(db.Key)
+  roles = db.ListProperty(db.Key)
+  theme_packages = db.ListProperty(db.Key)
   @classmethod
   def create(cls, email, password, title, user = None):
     site = cls()
@@ -40,10 +77,42 @@ class Site(ROTModel):
     site.keywords = ['webspinner inc.']
     site.tags = ['cms']
     site.secret = str(random())
+    page = Page.create({"name":"/","ancestor":None,"title":"Default Webspinner Page","menu_name":"Home","visible":True, "page_chain":"/","tags": site.tags})
+    main_theme = Theme.create({"name": "default", "html":"""
+<div class="wrapper">
+  <div class="header"><h1>{{ page.title }}</h1></div>
+  <div class="nav">{{ ws.get_nav_list }}</div>
+  <div class="content">{% block section_main %}{% endblock %}</div>
+  <div class="footer">Copyright 2010 Webspinner Inc.</div>
+</div>
+    ""","css":"""
+body{background: #eee; color: #111; font-family: Helvetica, Arial, SanSerif;text-align: center;}
+div.wrapper{display: block; margin-left: auto; margin-right: auto; width: 960px;}
+div.header{padding: 20px; display: block; text-align: left; width: 960px; background: #333; float: left;}
+div.header h1{color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,1);}
+div.content{background: #fff; color: #111; display: block; float: left; width: 960px; padding: 20px; text-align: left;}
+div.nav{width: 1000px; padding: 0px ; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1)));display: block; float: left;}
+div.nav ul.site_menu{list-style-type: none; margin: 0px; padding: 0px;}
+div.nav ul.site_menu li.menu_item{display: block; padding: 0px; float: left;}
+div.nav ul.site_menu li.menu_item a.menu_item_link:link{display: block; float: left; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:hover{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 2px 1px rgba(0,0,0,.9);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:visited{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:active{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.9);}
+div.footer{float: left; display: block; width: 960px; padding: 5px 20px; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1))); font-weight: bolder; color: rgba(255,255,255,1)}
+    ""","js":""})
+    page.theme = main_theme
+    page.put()
+    sections = page.get_or_make_sections()
+    theme_packages = ThemePackage.create({"name":"default","themes":[main_theme.key()]})
+    site.theme_packages.append(theme_packages.key())
+    site.pages.append(page.key())
     site.put()
     admin = User.create_user(email, password, user)
-    Role.create_default()
+    roles = Role.create_default()
+    for role in roles:
+      site.roles.append(role.key())
     Role.add_administrator(admin)
+    site.put()
     return site
   def actions_joined(self):
     return ", ".join(self.actions)
@@ -52,28 +121,29 @@ class Site(ROTModel):
   def keywords_joined(self):
     return ", ".join(self.keywords)
   @classmethod
-  def export(cls, key, format):
+  def export(cls, key):
     site = cls.get(key)
-    
+    return to_dict(site)
   
 class Role(ROTModel):
   """ Role defines the different available user roles"""
   name = db.StringProperty()
-  pages = db.ListProperty(db.Key)
   users = db.ListProperty(db.Key)
   @classmethod
   def create_default(cls):
-    roles = ['Anonymous','User','Administrator']
-    for role in roles:
+    roles_names = ['Anonymous','User','Administrator']
+    roles = []
+    for role in roles_names:
       new_role = cls()
       new_role.name = role
       new_role.put()
+      roles.append(new_role)
+    return roles
   @classmethod
   def add_administrator(cls, user):
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
-    user.role = adminrole.key()
-    user.put()
+    adminrole.put()
 
 class Permission(ROTModel):
   """ Permission assigns an action type with a role and is used in content elements to associate a user with the actions he can take"""
@@ -92,7 +162,6 @@ class User(ROTModel):
   address = db.PostalAddressProperty()
   phone = db.PhoneNumberProperty()
   fax = db.PhoneNumberProperty()
-  role = db.ReferenceProperty(Role)
   location = db.GeoPtProperty()
   url = db.LinkProperty()
   picture = db.BlobProperty()
@@ -105,7 +174,7 @@ class User(ROTModel):
     result = False if sha256("%s%s%s" % (site_secret, random_key, password)).hexdigest() != user.password else user.key()
     return result
   @classmethod
-  def create_user(cls, email, password, role = None, user = None):
+  def create_user(cls, email, password, user = None):
     site_secret = Site.all().get().secret
     random_key = str(random())
     new_user = cls()
@@ -113,7 +182,6 @@ class User(ROTModel):
     new_user.oauth = user
     new_user.password = sha256("%s%s%s" % (site_secret, random_key, password)).hexdigest()
     new_user.salt = random_key
-    new_user.role = role
     new_user.put()
     return new_user
 
@@ -121,6 +189,13 @@ class ThemePackage(ROTModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
   name = db.StringProperty()
   themes = db.ListProperty(db.Key)
+  @classmethod
+  def create(cls, dict_values):
+    theme_package = cls()
+    theme_package.name = dict_values["name"]
+    theme_package.themes = dict_values["themes"]
+    theme_package.put()
+    return theme_package
 
 class Theme(ROTModel):
   """ Theme relieves the need for static file upload 
@@ -145,11 +220,10 @@ class Page(ROTModel):
   """
   name = db.StringProperty()
   ancestor = db.SelfReferenceProperty()
-  site = db.ReferenceProperty(Site)
   title = db.StringProperty()
   menu_name = db.StringProperty()
   theme = db.ReferenceProperty(Theme)
-  panels = db.StringListProperty()
+  sections = db.ListProperty(db.Key)
   permissions = db.ListProperty(db.Key)
   visible = db.BooleanProperty()
   tags = db.StringListProperty()
@@ -158,8 +232,7 @@ class Page(ROTModel):
   def create(cls, dict_values):
     page = cls()
     page.name = dict_values['name']
-    print 'ancestor' in dict_values
-    if not dict_values['ancestor'] == "None":
+    if not dict_values['ancestor'] == "None"and not dict_values["ancestor"] == None:
       anc = Page.get_by_id(long(dict_values['ancestor']))
       page.ancestor = anc
     else:
@@ -169,12 +242,13 @@ class Page(ROTModel):
     page.visible = (dict_values['visible'] != "")
     page.tags = dict_values['tags']
     page.page_chain.append(dict_values["name"])
-    page.site = db.get(dict_values["site"])
     page.put()
     return page
+
   @classmethod
   def get_by_name(cls, name):
     return cls.all().filter("name", name).fetch(1)[0]
+
   @classmethod
   def get_by_page_chain(cls, page_chain):
     result = cls.all().filter("page_chain", page_chain).fetch(1)
@@ -182,54 +256,62 @@ class Page(ROTModel):
       return  result[0]
     else:
       return None
-  def sections(self):
-    result = {}
-    for panel in self.panels:
-      section = Section.get_by_name(panel)
-      result[panel] = section
-    return result
+
   def build_template(self):
     page_html = self.theme.html
-    for panel in self.panels:
-      section = Section.get_by_name(panel)
-      blocks_expression = '{%% block %s %%}{%% endblock %%}' % panel
+    sections = db.get(self.sections)
+    for section in sections:
+      blocks_expression = '{%% block %s %%}{%% endblock %%}' % section.name
       page_html = re.sub(blocks_expression, section.theme.html, page_html)
     return page_html
       
   def get_or_make_sections(self):
     blocks_expression = '{% block (section_[a-z]+) %}{% endblock %}'
     sections = re.findall(blocks_expression, self.theme.html)
-    self.panels = sections
-    self.put()
     result = []
     for section in sections:
       is_section = Section.get_by_name(section)
       if is_section and is_section.page == self:
+        self.sections.append(is_section.key())
         result.append(is_section)
       else:
-        is_section = Section()
-        is_section.name = section
-        is_section.page = self
-        is_section.panel = section
-        is_section.permissions = self.permissions
-        is_section.visible = self.visible
-        is_section.tags = self.tags
-        is_section.put()
+        is_section = Section.create({"page":self.key(), "name": section})
+        self.sections.append(is_section.key())
         result.append(is_section)
+    self.put()
     return result
 
 class Section(ROTModel):
   """ Section is a wrapper class for the each logical section in a page.
   """
-  site = db.ReferenceProperty(Site)
   name = db.StringProperty()
   theme = db.ReferenceProperty(Theme)
-  page = db.ReferenceProperty(Page)
-  panel = db.StringProperty()
   permissions = db.ListProperty(db.Key)
   visible = db.BooleanProperty()
   contents = db.ListProperty(db.Key)
   tags = db.StringListProperty()
+  @classmethod
+  def create(cls, dict_values):
+    section = cls()
+    page = db.get(dict_values["page"])
+    section.name = dict_values["name"]
+    section.permissions = page.permissions
+    section.visible = page.visible
+    section.tags = page.tags
+    section.theme = Theme.create({"name":"default_section", "html":"""
+<div class="%s">
+  {%% for content in page.sections.dict.%s.contents_by_date %%}
+    {{ content.content }}
+  {%% endfor %%}
+</div>
+    """ % (section.name, section.name), "css":"","js":""})
+    theme_packages = ThemePackage.all().fetch(1000)
+    for theme_package in theme_packages:
+      if page.theme.key() in theme_package.themes:
+        theme_package.themes.append(section.theme.key())
+    section.add_content("Hello World!", "hi there")
+    return section
+    
   @classmethod
   def get_by_name(cls, name):
     result = cls.all().filter("name", name).fetch(1)
@@ -238,17 +320,17 @@ class Section(ROTModel):
     else:
       return None
 
-  def add_content(self, content, abstract, user, tags):
+  def add_content(self, content, abstract, user = None, tags = None):
     content_object = Content()
-    content_object.section = self
     content_object.abstract = abstract
     content_object.content = content
     content_object.created_by_user = user
-    content_object.tags = string_to_tags(self.site, tags)
+    if tags:
+      content_object.tags = tags
     content_object.permissions = self.permissions
     content_object.visible = self.visible
     content_object.put()
-    self.contents.append(content_object.key)
+    self.contents.append(content_object.key())
     self.put()
     return content_object
     

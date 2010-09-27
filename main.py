@@ -32,29 +32,28 @@ class Webspinner():
   def __init__(self):
     self.site = Site.all().get()
 
-  class navigation:
-    @classmethod
-    def get_nav_list(cls, site):
-      html_out = "<ul class='site_menu'>"
-      pages = Page.all().filter('site', site).fetch(500)
-      def top_level(page):
-        if not page.ancestor:
-          return True
-        else:
-          return False        
-      top_level_pages = filter(top_level, pages)
-      for page in top_level_pages:
-        add_page_to_menu(page)
-      def add_page_to_menu(page):
-        html_out += "<li class='menu_item top_level'><a href='%s' class='menu_item_link'>%s</a>" % (page.page_chain, page.menu_name)
-        children = filter(lambda x: x.ancestor == page, pages)
-        if children:
-          html_out += "<ul>"
-          for p in children:
-            add_page_to_menu(p)
-          html_out += "</ul>"
-        html_out += "</li>"
+  def get_nav_list(self):
+    html_out = "<ul class='site_menu'>"
+    pages = db.get(self.site.pages)
+    def top_level(page):
+      if not page.ancestor:
+        return True
+      else:
+        return False
+    def add_page_to_menu(page, html_out):
+      html_out += "<li class='menu_item'><a href='%s' class='menu_item_link'>%s</a>" % ("/".join(page.page_chain), page.menu_name)
+      children = filter(lambda x: x.ancestor == page, pages)
+      if children:
+        html_out += "<ul>"
+        for p in children:
+          add_page_to_menu(p)
+        html_out += "</ul>"
+      html_out += "</li>"
       return html_out
+    top_level_pages = filter(top_level, pages)
+    for page in top_level_pages:
+      html_out = add_page_to_menu(page, html_out)
+    return html_out
 
   class users:
     @classmethod
@@ -70,7 +69,7 @@ class Webspinner():
       if u'user' in handler.session:
         user = User.get(handler.session['user'])
         role = Role.all().filter("name", "Administrator").get()
-        if role.key() ==  user.role.key():
+        if user.key() in role.users:
           return True
         else:
           return False
@@ -121,6 +120,8 @@ class GetPage(Handler):
     #print path
     page_chain = path
     query_chain = query_string.split("&")
+    user_control = ""
+    user_label = ""
     def kv_q(x):
       x = x.split('=')
       if len(x) < 2:
@@ -129,11 +130,48 @@ class GetPage(Handler):
     query_chain_kv = map(kv_q, query_chain)
     page = Page.get_by_page_chain(page_chain)
     if page:
+      user = self.ws.users.get_current_user(self)
+      if user:
+        user_control = self.ws.users.create_logout_url(path)
+        user_label = "Logout"
+        if self.ws.users.is_current_user_admin(self):
+          admin_html = ["""<div class="admin page_theme_html">
+            <form action="/admin/edit/theme/%s" method="POST">
+              <textarea name="page.theme.html" id="page.theme.html">%s</textarea>
+              <textarea name="page.theme.css" id="page.theme.css">%s</textarea>
+              <textarea name="page.theme.js" id="page.theme.js">%s</textarea>
+              <input type="submit" name="page.theme.submit" value="Save Changes"/>
+            </form>
+          </div>""" % (page.theme.key(), page.theme.html, page.theme.css, page.theme.js),]
+          for section in db.get(page.sections):
+            admin_html.append("""<div class="admin section_theme_html">
+              <form action="/admin/edit/theme/%s" method="POST">
+                <textarea name="section.theme.html" id="section.theme.html">%s</textarea>
+                <textarea name="section.theme.css" id="section.theme.css">%s</textarea>
+                <textarea name="section.theme.js" id="section.theme.js">%s</textarea>
+                <input type="submit" name="section.theme.submit" value="Save Changes"/>
+              </form>
+            </div>""" % (section.theme.key(), section.theme.html, section.theme.css, section.theme.js))
+            for content in db.get(section.contents):
+              admin_html.append("""<div class="admin content.edit">
+                <form action="/admin/edit/content/%s" method="POST">
+                  <textarea name="content.content" id="content.content">%s</textarea>
+                  <input type="submit" name="content.submit" id="content.submit" value="Save Changes" />
+                </form>
+              </div>""" % (content.key(), content.content))
+      else:
+        user_control = self.ws.users.create_login_url(path)
+        user_label = "Login"
       page_theme = page.theme
       #print page.build_template()
-      page_html = "<title>%s</title><style>%s</style><script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>%s" % (page.title, page_theme.css, page_theme.js, page.build_template())
+      page_html = "<html><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>%s</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js, "".join(admin_html))
       page_template = template.Template(page_html)
-      template_values = {"page": page, "sections": page.sections()}
+      sections = db.get(page.sections)
+      section_dict = {}
+      for section in sections:
+        section_dict[section.name] =  section
+      user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
+      template_values = {"ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link}
       self.render_string_out(page_template, template_values)
     else:
       self.error(404) #self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
@@ -234,7 +272,7 @@ class AddItem(Handler):
             values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
           else:
             values[k.split('.')[-1]] = value
-        values[k] = self.request.get(k)
+          values[k] = self.request.get(k)
         result = cls.create(values)
         self.response.out.write(values)
       else:
@@ -242,11 +280,37 @@ class AddItem(Handler):
       #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
 class EditItem(Handler):
+  
   @admin
   def get(self, args):
     type = args.split("/")[0]
     key = args.split("/")[1]
-    self.response.out.write(type + " : " + key)
+    if type.capitalize() in globals():
+      cls = globals()[type.capitalize()]
+      if cls:
+        item = db.get(key)
+        
+  @admin
+  def post(self, args):
+    type = args.split("/")[0]
+    key = args.split("/")[1]
+    if type.capitalize() in globals():
+      cls = globals()[type.capitalize()]
+      if cls:
+        values = {}
+        values["key"] = key
+        for k in self.request.arguments():
+          value = self.request.get(k)
+          if k.split('.')[-1] in cls().properties() and "List" in cls().properties()[k.split('.')[-1]].__class__().__str__():
+            values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
+          else:
+            values[k.split('.')[-1]] = value
+          values[k] = self.request.get(k)
+        result = cls.update(values)
+        self.response.out.write(values)
+      else:
+        self.response.out.write(self.request)
+          
 
 class DeleteItem(Handler):
   @admin
@@ -262,7 +326,7 @@ class ExportItem(Handler):
     type = array_args[0]
     key = array_args[1]
     format = array_args[2]
-    self.response.out.write(type + " : " + key + " : " + format)
+    self.json_out(Site.export(key))
     
 
 ROUTES = [('/admin', Administrate),
