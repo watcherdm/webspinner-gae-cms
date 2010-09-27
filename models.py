@@ -66,6 +66,7 @@ class Site(ROTModel):
   secret = db.StringProperty()
   pages = db.ListProperty(db.Key)
   roles = db.ListProperty(db.Key)
+  images = db.ListProperty(db.Key)
   theme_packages = db.ListProperty(db.Key)
   @classmethod
   def create(cls, email, password, title, user = None):
@@ -81,7 +82,7 @@ class Site(ROTModel):
     main_theme = Theme.create({"name": "default", "html":"""
 <div class="wrapper">
   <div class="header"><h1>{{ page.title }}</h1></div>
-  <div class="nav">{{ ws.get_nav_list }}</div>
+  <div class="nav">{{ ws.get_nav_list }} {{ user_control_link }}</div>
   <div class="content">{% block section_main %}{% endblock %}</div>
   <div class="footer">Copyright 2010 Webspinner Inc.</div>
 </div>
@@ -113,6 +114,7 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
       site.roles.append(role.key())
     Role.add_administrator(admin)
     site.put()
+    perms = site.build_permissions()
     return site
   def actions_joined(self):
     return ", ".join(self.actions)
@@ -120,11 +122,25 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
     return ", ".join(self.tags)
   def keywords_joined(self):
     return ", ".join(self.keywords)
+
   @classmethod
   def export(cls, key):
     site = cls.get(key)
     return to_dict(site)
-  
+
+  def build_permissions(self):
+    perm_set = []
+    for action in self.actions:
+      roles = db.get(self.roles)
+      for role in roles:
+        perm = Permission()
+        perm.role = role
+        perm.type = action
+        perm.put()
+        perm_set.append(perm)
+    return perm_set
+    
+        
 class Role(ROTModel):
   """ Role defines the different available user roles"""
   name = db.StringProperty()
@@ -149,6 +165,28 @@ class Permission(ROTModel):
   """ Permission assigns an action type with a role and is used in content elements to associate a user with the actions he can take"""
   type = db.StringProperty()
   role = db.ReferenceProperty(Role)
+  
+  @classmethod
+  def get_for_role(cls, role):
+    return cls.all().filter("role",role).fetch(100)
+  
+  @classmethod
+  def get_for_action(cls, action):
+    return cls.all().filter("type", action).fetch(100)
+  
+  @classmethod
+  def get_table(cls):
+    roles = Role.all().fetch(100)
+    site = Site.all().get()
+    html_out = "<table><tr><td></td>"
+    html_out += "".join(["<th>%s</th>" % action for action in site.actions])
+    html_out += "</tr>"
+    for role in roles:
+      html_out += "<tr><th>%s</th>" % role.name
+      html_out += "".join(["<td><input type='checkbox' name='page.permissions' id='page.permissions' value='%s'/></td>" % perm.key() for perm in cls.get_for_role(role)])
+      html_out += "</tr>"
+    html_out += "</table>"
+    return html_out
 
 class User(ROTModel):   
   """ User contains the user information necessary to login as well as profile data"""
@@ -184,6 +222,19 @@ class User(ROTModel):
     new_user.salt = random_key
     new_user.put()
     return new_user
+  @classmethod
+  def update(cls, dict_values):
+    if "key" in dict_values:
+      user = db.get(dict_values["key"])
+      if user:
+        for key, property in user.properties().iteritems():
+          if key in dict_values:
+            property = dict_values["key"]
+        user.put()
+      else:
+        return None
+    else:
+      return None
 
 class ThemePackage(ROTModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
@@ -270,7 +321,12 @@ class Page(ROTModel):
 
   @classmethod
   def get_by_name(cls, name):
-    return cls.all().filter("name", name).fetch(1)[0]
+    result = cls.all().filter("name", name).fetch(1)
+    if len(result) > 0:
+      return result[0]
+    else:
+      return None
+    
 
   @classmethod
   def get_by_page_chain(cls, page_chain):
@@ -286,6 +342,7 @@ class Page(ROTModel):
       return result[0]
     else:
       return None
+
   def build_template(self):
     page_html = self.theme.html
     sections = db.get(self.sections)
@@ -310,6 +367,14 @@ class Page(ROTModel):
         result.append(is_section)
     self.put()
     return result
+  
+  @classmethod
+  def update(cls, values_dict):
+    if "key" in values_dict:
+      page = db.get(values_dict["key"])
+      return values_dict
+    else:
+      return None
 
 class Section(ROTModel):
   """ Section is a wrapper class for the each logical section in a page.

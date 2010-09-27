@@ -87,6 +87,7 @@ class Handler(webapp.RequestHandler):
   def __init__(self):
     self.ws = Webspinner()
     self.session = sessions.Session()
+    self.actions = []
     
   def json_out(self, data):
     self.response.headers.add_header("Content-Type","application/json")
@@ -96,6 +97,21 @@ class Handler(webapp.RequestHandler):
   def render_string_out(self, template_object, template_values):
     context = template.Context(template_values)
     self.response.out.write(template_object.render(context))
+  def permission_check(self, page):
+    perms = db.get(page.permissions)
+    if perms:
+      user = self.ws.users.get_current_user()
+      for perm in perms:
+        if user in perm.role.users:
+          self.actions.append(perm.type)
+      if len(self.actions) == 0:
+        return False
+      else:
+        return self.actions
+    else:
+      return True
+      # default to show the page, no permissions is the same as anonymous
+    
 
 def admin(handler_method):
   def redirect_if_needed(self, *args, **kwargs):
@@ -128,44 +144,81 @@ class GetPage(Handler):
         return x[0]
       return {x[0]: x[1]}
     query_chain_kv = map(kv_q, query_chain)
-    page = Page.get_by_page_name(path)
+    page = Page.get_by_name(path)
     pages = Page.all().fetch(100)
     admin_html = []
     if page:
+      if "visible" in page.properties():
+        checked = "checked" if page.visible else ""
       user = self.ws.users.get_current_user(self)
       if user:
         user_control = self.ws.users.create_logout_url(path)
         user_label = "Logout"
         if self.ws.users.is_current_user_admin(self):
-          admin_html = ["<div class='admin_tools'>", """<span class="admin_page_tab">Admin Page<div class="admin page_theme_html">
-            <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
-              <textarea name="page.theme.html" id="page.theme.html">%s</textarea>
-              <textarea name="page.theme.css" id="page.theme.css">%s</textarea>
-              <textarea name="page.theme.js" id="page.theme.js">%s</textarea>
-              <input type="submit" name="page.theme.submit" value="Save Changes"/>
-            </form>
-          </div></span>""" % (page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js),]
+          admin_html = ["<div class='admin_tools'>", 
+            # page admin for current page
+            """<span class="admin_tab">Admin Page
+            <div class="admin page_wrapper">
+              <div class="tab_strip"><span class="data_tab">Data</span><span class="look_tab">Looks</span><span class="secure_tab">Security</span>
+              </div>
+              <div class="data">
+              <form action="/admin/edit/page/%s?return_url=%s" method="POST">
+                <label for="page.name">Page Name: <span class='help'>how it appears in the url</span></label><br />
+                <input type="text" id="page.name" name="page.name" value="%s" required /><br />
+                <label for="page.ancestor">Parent Page: <span class='help'>which page this will appear under in the menu, if any.</span></label><br />
+                <select name="page.ancestor" id="page.ancestor">
+                <option value="None">-- None --</option>
+                %s
+                </select><br />
+                <label for="page.title">Page Title: <span class='help'>the title of the page shows in the browser title or tab title.</span></label><br />
+                <input type="text" name="page.title" id="page.title" value="%s" required /><br />
+                <label for="page.menu_name">Page Menu Name: <span class='help'>the name to appear in the menu listing.</span></label><br />
+                <input type="text" name="page.menu_name" id="page.menu_name" value="%s" required /><br />
+                <label for="page.visible">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
+                <input type="checkbox" name="page.visible" id="page.visible" value="True" %s /><br />
+                <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
+                <input type="text" name="page.tags" id="page.tags" value="%s" /><br />
+                <input type="submit" name="page.submit" id="page.submit" />
+              </form>
+            </div>
+            <div class="look">
+              <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
+                <textarea name="page.theme.html" id="page.theme.html">%s</textarea>
+                <textarea name="page.theme.css" id="page.theme.css">%s</textarea>
+                <textarea name="page.theme.js" id="page.theme.js">%s</textarea>
+                <input type="submit" name="page.theme.submit" value="Save Changes"/>
+              </form>
+            </div>
+            <div class="secure">
+              <form action="/admin/edit/page/%s?return_url=%s" method="POST">
+                %s
+                <input type="submit" name="page.permissions.submit" value="Save Permissions"/>
+              </form>
+            </div>
+          </div>
+          </span>""" % (page.key(), self.request.path, page.name, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], page.title, page.menu_name, checked, ", ".join(page.tags), page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js, page.key(), self.request.path, Permission.get_table())]
           s = 0
           c = 0
           for section in db.get(page.sections):
-            admin_html.append("""<span class="admin_section_tab">Admin Section %d<div class="admin section_theme_html">
+            admin_html.append("""<span class="admin_tab">%s<div class="admin section_theme_html">
               <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
                 <textarea name="section.theme.html" id="section.theme.html">%s</textarea>
                 <textarea name="section.theme.css" id="section.theme.css">%s</textarea>
                 <textarea name="section.theme.js" id="section.theme.js">%s</textarea>
                 <input type="submit" name="section.theme.submit" value="Save Changes"/>
               </form>
-            </div></span>""" % (s, section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
+            </div></span>""" % (section.name,section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
             s += 1
             for content in db.get(section.contents):
-              admin_html.append("""<span class="admin_content_tab">Admin Content %d<div class="admin content.edit">
+              admin_html.append("""<span class="admin_tab">Admin Content %d<div class="admin content.edit">
                 <form action="/admin/edit/content/%s?return_url=%s" method="POST">
                   <textarea name="content.content" id="content.content">%s</textarea>
                   <input type="submit" name="content.submit" id="content.submit" value="Save Changes" />
                 </form>
               </div></span>""" % (c, content.key(),self.request.path,  content.content))
               c += 1
-          admin_html.append("""<span class="admin_add_page">Add New Page <div class="admin page.add">
+          # add page form
+          admin_html.append("""<span class="admin_tab">Add New Page <div class="admin page.add">
                 <form action="/admin/add/page?return_url=%s" method="POST">
       <label for="page.name">Page Name: <span class='help'>how it appears in the url</span></label><br />
       <input type="text" id="page.name" name="page.name" required /><br />
@@ -178,25 +231,61 @@ class GetPage(Handler):
       <input type="text" name="page.title" id="page.title" required /><br />
       <label for="page.menu_name">Page Menu Name: <span class='help'>the name to appear in the menu listing.</span></label><br />
       <input type="text" name="page.menu_name" id="page.menu_name" required /><br />
-      <label for="page.visibile">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
-      <input type="checkbox" name="page.visible" id="page.visible" /><br />
+      <label for="page.visible">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
+      <input type="checkbox" name="page.visible" id="page.visible" value="True" %s /><br />
       <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
       <input type="text" name="page.tags" id="page.tags" /><br />
       <input type="submit" name="page.submit" id="page.submit" />
     </form>         
-          </div>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages]))
+          </div>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], checked))
+          # css for admin items
           admin_html.append("""<style>div.admin {display: none; position: absolute; height: 480px; width: 640px; background: #333; left: 300px; top: 20px; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);}
-          div.admin textarea{width: 630px; height: 140px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
+          div.admin textarea{width: 630px; height: 120px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
           div.admin_tools {position: fixed; top: 10px left: 0px; text-align: left;}
           div.admin_tools>span {position: relative;left: 0px;padding: 6px; display: block; height: 20px; width: 150px; background: #333; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8); color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8); font-weight: bolder;margin-left: -15px; margin-top: 10px;}
           span.help {display: none;}
-          div.admin input[type=text], div.admin select{margin: 5px; width: 630px;}
+          div.admin input[type=text], div.admin select,div.admin label{margin: 5px; width: 630px;}
+          
+          span.data_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
+          span.look_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
+          span.secure_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
+          div.admin div.data {}
+          div.admin div.look {display: none;}
+          div.admin div.secure {display: none;}
+          div.secure table{color: white; width: 100%;}
           </style>""")
+          # javascript for admin items
           admin_html.append("""<script type="text/javascript">
-            $(function(){
-              $("div.admin_tools").find("span").toggle(function(){$(this).find("div").show().css("top", 100 - $(this).offset().top + "px")}, function(){$(this).find("div").hide()});
-              $("div.admin_tools").find("span div").click(function(){return false;}).find("form>input[type=submit]").click(function(){$(this).parent("form").submit();});
-            })
+$(function(){
+              $("div.admin_tools").find("span").toggle(function(){$(this).find(">div").show().css("top", 100 - $(this).offset().top + "px")}, function(e){if($(e.srcElement).hasClass("admin_tab")){$(this).find("div:not(.tab_strip, .data)").hide().find(".data").show();}});
+              $("div.admin_tools span div").click(function(e){e.stopPropagation(); return true;});
+              $("div.admin_tools span div.admin>div.tab_strip>span").click(webspinner.admin.showPanel);
+})
+if(!window.webspinner){
+  webspinner = {};
+}
+webspinner.admin = (function(){
+              return {
+                showPanel: function(e){
+                  console.log(this);
+                  var tab = $(this).attr("class");
+                  console.log(tab);
+                  tab = tab.replace("_tab", "");
+                  console.log(tab);
+                  $(this).parents("div.admin").children(":not(.tab_strip)").hide();
+                  console.log($(this).parents("div.admin"));
+                  $(this).parents(".admin").find("." + tab).show();
+                },
+                sendPermissions : function(e){
+                  var form = $(this).parents("form");
+                  $(form).find("input[type=checkbox").each(function(){
+                    if ($(this).attr("checked")){
+                      result.push($(this).val());
+                    }
+                  });
+                }
+              }
+})()
           </script>""")
           admin_html.append("</div>")
       else:
@@ -324,34 +413,54 @@ class AddItem(Handler):
       #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
 class EditItem(Handler):
-  
+  #TODO: finish dynamic form builder
   @admin
   def get(self, args):
     type = args.split("/")[0]
     key = args.split("/")[1]
+    return_url = self.request.get("return_url")
     if type.capitalize() in globals():
       cls = globals()[type.capitalize()]
       if cls:
         item = db.get(key)
+        html_out = """<form action="/admin/edit/%s/%s?return_url=%s" method="POST">""" % (type, key, return_url)
+        for key, property in item.properties().iteritems():
+          fitype = item.properties()[key].__class__().__str__()
+          httype = "text"
+          if ".ListProperty" in fitype:
+            httype = "text"
+          if ".BlobProperty" in fitype:
+            httype = "file"
+          elif ".StringProperty" in fitype:
+            httype = "text"
+          html_out += """<label for="%s">%s</label>
+          <input type="file" name="%s" id="%s" value="%s" />
+          """ % (type.lowercase() + "." + property, property.capitalize(), httype + "." + propertytype.lowercase() + "." + property, )
         
   @admin
   def post(self, args):
     type = args.split("/")[0]
-    key = args.split("/")[1]
+    key = args.split("/")[1].split("?")[0]
     if type.capitalize() in globals():
       cls = globals()[type.capitalize()]
       if cls:
         values = {}
         values["key"] = key
+        
         for k in self.request.arguments():
           value = self.request.get(k)
-          if k.split('.')[-1] in cls().properties() and "List" in cls().properties()[k.split('.')[-1]].__class__().__str__():
-            values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
-          else:
-            values[k.split('.')[-1]] = value
+          if k.split('.')[-1] in cls().properties().keys():
+            if k.split(".")[-1] == "permissions":
+              self.response.out.write(self.request.get("page.permissions"))
+              return False
+            if ".ListProperty" in cls().properties()[k.split('.')[-1]].__class__.__str__(""):
+              values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
+            else:
+              values[k.split('.')[-1]] = value
           values[k] = self.request.get(k)
         result = cls.update(values)
         if result:
+          #print result
           self.redirect(self.request.get("return_url"))
         else:
           self.response.out.write("Failed to update")
