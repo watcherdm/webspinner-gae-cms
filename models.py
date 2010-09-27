@@ -12,7 +12,7 @@ from django.utils import simplejson
 from hashlib import sha256
 from random import random
 import re
-
+from main import *
 import datetime
 import time
 
@@ -47,6 +47,31 @@ def to_dict(model):
 
   return output
 
+class WsModel(ROTModel):
+  
+  @classmethod
+  def update(cls, dict_values):
+    if "key" in dict_values:
+      model = db.get(dict_values["key"])
+      for key, property in model.properties().iteritems():
+        if key in dict_values:
+          fitype = property.__class__().__str__()
+          if ".StringListProperty" in fitype:
+            dict_values[key] = dict_values[key].split(",")
+          elif ".BooleanProperty" in fitype:
+            dict_values[key] = dict_values[key] != ""
+          elif ".ReferenceProperty" in fitype:
+            dict_values[key] = None if dict_values[key] == "None" else db.get(dict_values[key])
+          elif ".ListProperty" in fitype:
+            dict_values[key] = [object.key() for object in db.get(dict_values.split(","))]
+          else:
+            dict_values[key] = dict_values[key].lstrip().rstrip()
+          setattr(model, key, dict_values[key])
+      model.put()
+      return model
+    else:
+      return None
+
 ACTIONS = ['view','edit']
 
 def string_to_tags(site, tags):
@@ -55,7 +80,7 @@ def string_to_tags(site, tags):
   site.put()
   return result
 
-class Site(ROTModel):
+class Site(WsModel):
   """ Site is a wrapper class for all the site data."""
   admin = db.EmailProperty()
   title = db.StringProperty()
@@ -141,7 +166,7 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
     return perm_set
     
         
-class Role(ROTModel):
+class Role(WsModel):
   """ Role defines the different available user roles"""
   name = db.StringProperty()
   users = db.ListProperty(db.Key)
@@ -161,7 +186,7 @@ class Role(ROTModel):
     adminrole.users.append(user.key())
     adminrole.put()
 
-class Permission(ROTModel):
+class Permission(WsModel):
   """ Permission assigns an action type with a role and is used in content elements to associate a user with the actions he can take"""
   type = db.StringProperty()
   role = db.ReferenceProperty(Role)
@@ -188,7 +213,7 @@ class Permission(ROTModel):
     html_out += "</table>"
     return html_out
 
-class User(ROTModel):   
+class User(WsModel):   
   """ User contains the user information necessary to login as well as profile data"""
   oauth = db.UserProperty()
   email = db.EmailProperty()
@@ -222,21 +247,8 @@ class User(ROTModel):
     new_user.salt = random_key
     new_user.put()
     return new_user
-  @classmethod
-  def update(cls, dict_values):
-    if "key" in dict_values:
-      user = db.get(dict_values["key"])
-      if user:
-        for key, property in user.properties().iteritems():
-          if key in dict_values:
-            property = dict_values["key"]
-        user.put()
-      else:
-        return None
-    else:
-      return None
-
-class ThemePackage(ROTModel):
+    
+class ThemePackage(WsModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
   name = db.StringProperty()
   themes = db.ListProperty(db.Key)
@@ -248,7 +260,7 @@ class ThemePackage(ROTModel):
     theme_package.put()
     return theme_package
 
-class Theme(ROTModel):
+class Theme(WsModel):
   """ Theme relieves the need for static file upload 
     Each theme element contains the complete html, css and js 
     for the space the element is intended to fill."""
@@ -281,7 +293,7 @@ class Theme(ROTModel):
       return None
     
 
-class Page(ROTModel):
+class Page(WsModel):
   """ Page is a wrapper class for each logical page in the cms website
   """
   name = db.StringProperty()
@@ -368,13 +380,6 @@ class Page(ROTModel):
     self.put()
     return result
   
-  @classmethod
-  def update(cls, values_dict):
-    if "key" in values_dict:
-      page = db.get(values_dict["key"])
-      return values_dict
-    else:
-      return None
 
 class Section(ROTModel):
   """ Section is a wrapper class for the each logical section in a page.

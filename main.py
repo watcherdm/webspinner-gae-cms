@@ -207,7 +207,7 @@ class GetPage(Handler):
                 <textarea name="section.theme.js" id="section.theme.js">%s</textarea>
                 <input type="submit" name="section.theme.submit" value="Save Changes"/>
               </form>
-            </div></span>""" % (section.name,section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
+            </div></span>""" % (section.name.replace("section_","").capitalize(),section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
             s += 1
             for content in db.get(section.contents):
               admin_html.append("""<span class="admin_tab">Admin Content %d<div class="admin content.edit">
