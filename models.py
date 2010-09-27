@@ -245,6 +245,7 @@ class Page(ROTModel):
   page_chain = db.StringListProperty()
   @classmethod
   def create(cls, dict_values):
+    mainpage = Page.all().get()
     page = cls()
     page.name = dict_values['name']
     if not dict_values['ancestor'] == "None"and not dict_values["ancestor"] == None:
@@ -254,10 +255,17 @@ class Page(ROTModel):
       page.ancestor = None
     page.title = dict_values['title']
     page.menu_name = dict_values['menu_name']
-    page.visible = (dict_values['visible'] != "")
+    if "visible" in dict_values:
+      page.visible = (dict_values['visible'] != "")
     page.tags = dict_values['tags']
     page.page_chain.append(dict_values["name"])
+    if mainpage:
+      page.theme = Theme.create({"name":page.name,"html":mainpage.theme.html, "css": mainpage.theme.css, "js": mainpage.theme.js})
     page.put()
+    site = Site.all().get()
+    if site:
+      site.pages.append(page.key())
+      site.put()
     return page
 
   @classmethod
@@ -271,7 +279,13 @@ class Page(ROTModel):
       return  result[0]
     else:
       return None
-
+  @classmethod
+  def get_by_page_name(cls, path):
+    result = cls.all().filter("name", path).fetch(1)
+    if len(result) > 0:
+      return result[0]
+    else:
+      return None
   def build_template(self):
     page_html = self.theme.html
     sections = db.get(self.sections)
@@ -316,7 +330,7 @@ class Section(ROTModel):
     section.tags = page.tags
     section.theme = Theme.create({"name":"default_section", "html":"""
 <div class="%s">
-  {%% for content in sections.%s.contents_by_date %%}
+  {%% for content in sections.%s.contents_by_created %%}
     {{ content.content }}
   {%% endfor %%}
 </div>
@@ -369,7 +383,16 @@ class Content(ROTModel):
   created_by_user = db.ReferenceProperty(User)
   visible = db.BooleanProperty()
   tags = db.StringListProperty()
-
+  @classmethod
+  def update(cls, dict_values):
+    content = cls.get(dict_values["key"])
+    if content:
+      content.content = dict_values["content"]
+      content.put()
+      return content
+    else:
+      return None
+    
 class Image(ROTModel):
   """ Image is a wrapper class for the image elements in content """
   file = db.BlobProperty()

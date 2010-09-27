@@ -128,7 +128,8 @@ class GetPage(Handler):
         return x[0]
       return {x[0]: x[1]}
     query_chain_kv = map(kv_q, query_chain)
-    page = Page.get_by_page_chain(page_chain)
+    page = Page.get_by_page_name(path)
+    pages = Page.all().fetch(100)
     admin_html = []
     if page:
       user = self.ws.users.get_current_user(self)
@@ -164,14 +165,36 @@ class GetPage(Handler):
                 </form>
               </div></span>""" % (c, content.key(),self.request.path,  content.content))
               c += 1
+          admin_html.append("""<span class="admin_add_page">Add New Page <div class="admin page.add">
+                <form action="/admin/add/page?return_url=%s" method="POST">
+      <label for="page.name">Page Name: <span class='help'>how it appears in the url</span></label><br />
+      <input type="text" id="page.name" name="page.name" required /><br />
+      <label for="page.ancestor">Parent Page: <span class='help'>which page this will appear under in the menu, if any.</span></label><br />
+      <select name="page.ancestor" id="page.ancestor">
+      <option value="None">-- None --</option>
+      %s
+      </select><br />
+      <label for="page.title">Page Title: <span class='help'>the title of the page shows in the browser title or tab title.</span></label><br />
+      <input type="text" name="page.title" id="page.title" required /><br />
+      <label for="page.menu_name">Page Menu Name: <span class='help'>the name to appear in the menu listing.</span></label><br />
+      <input type="text" name="page.menu_name" id="page.menu_name" required /><br />
+      <label for="page.visibile">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
+      <input type="checkbox" name="page.visible" id="page.visible" /><br />
+      <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
+      <input type="text" name="page.tags" id="page.tags" /><br />
+      <input type="submit" name="page.submit" id="page.submit" />
+    </form>         
+          </div>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages]))
           admin_html.append("""<style>div.admin {display: none; position: absolute; height: 480px; width: 640px; background: #333; left: 300px; top: 20px; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           div.admin textarea{width: 630px; height: 140px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
           div.admin_tools {position: fixed; top: 10px left: 0px; text-align: left;}
-          div.admin_tools span {position: relative;left: 0px;padding: 6px; display: block; height: 20px; width: 150px; background: #333; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8); color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8); font-weight: bolder;margin-left: -15px; margin-top: 10px;}
+          div.admin_tools>span {position: relative;left: 0px;padding: 6px; display: block; height: 20px; width: 150px; background: #333; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8); color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8); font-weight: bolder;margin-left: -15px; margin-top: 10px;}
+          span.help {display: none;}
+          div.admin input[type=text], div.admin select{margin: 5px; width: 630px;}
           </style>""")
           admin_html.append("""<script type="text/javascript">
             $(function(){
-              $("div.admin_tools").find("span").toggle(function(){$(this).find("div").show()}, function(){$(this).find("div").hide()});
+              $("div.admin_tools").find("span").toggle(function(){$(this).find("div").show().css("top", 100 - $(this).offset().top + "px")}, function(){$(this).find("div").hide()});
               $("div.admin_tools").find("span div").click(function(){return false;}).find("form>input[type=submit]").click(function(){$(this).parent("form").submit();});
             })
           </script>""")
@@ -185,10 +208,11 @@ class GetPage(Handler):
       page_template = template.Template(page_html)
       sections = db.get(page.sections)
       section_dict = {}
+      site_users = User.all().fetch(1000)
       for section in sections:
         section_dict[section.name] =  section
       user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
-      template_values = {"ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link, 'admin_content': "".join(admin_html)}
+      template_values = {"site_users": site_users, "ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link, 'admin_content': "".join(admin_html)}
       self.render_string_out(page_template, template_values)
     else:
       self.error(404) #self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
@@ -272,7 +296,7 @@ class AddItem(Handler):
   @admin
   def get(self, type):
     if type.capitalize() in globals():
-      cls = globals()[type.capialize()]
+      cls = globals()[type.capitalize()]
       if cls:
         fields = cls().properties()
         self.render_out("form.html", fields)
@@ -291,9 +315,12 @@ class AddItem(Handler):
             values[k.split('.')[-1]] = value
           values[k] = self.request.get(k)
         result = cls.create(values)
-        self.response.out.write(values)
+        if result:
+          self.redirect(self.request.get("return_url"))
+        else:
+          self.response.out.write("Failed to update")
       else:
-        self.response.out.write(self.request)
+        self.response.out.write(self.request.get("return_url"))
       #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
 class EditItem(Handler):
