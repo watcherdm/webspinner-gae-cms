@@ -1,5 +1,5 @@
 application: iaos-web
-version: 1
+version: 1-0
 runtime: python
 api_version: 1
 
