@@ -165,6 +165,14 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
         perm_set.append(perm)
     return perm_set
     
+  def images_for_use(self):
+    images = db.get(self.images)
+    html_out = "<ul class='image_selector'>"
+    for image in images:
+      html_out += "<li><img src='/images/%s/s' title='%s' /></li>" % (image.name, image.title)
+    html_out += "</ul>"
+    return html_out
+    
         
 class Role(WsModel):
   """ Role defines the different available user roles"""
@@ -463,7 +471,7 @@ class Content(ROTModel):
     else:
       return None
     
-class Image(ROTModel):
+class Image(WsModel):
   """ Image is a wrapper class for the image elements in content """
   file = db.BlobProperty()
   title = db.StringProperty()
@@ -480,4 +488,7 @@ class Image(ROTModel):
     img.name = str(random()).split('.')[-1]
     img.tags = dict_values['tags']
     img.put()
+    site = Site.all().get()
+    site.images.append(img.key())
+    site.put()
     return img

@@ -237,7 +237,30 @@ class GetPage(Handler):
       <input type="text" name="page.tags" id="page.tags" /><br />
       <input type="submit" name="page.submit" id="page.submit" />
     </form>         
-          </div>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], checked))
+          </div></span>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], checked))
+          # image manager for the site
+          admin_html.append("""<span class="admin_tab">Images
+            <div class="admin image.add">
+              <div class="tab_strip">
+                <span class="data_tab">Add Image</span>
+                <span class="look_tab">Use Image</span>
+              </div>
+              <div class="data">
+      <form action="/admin/add/image?return_url=%s" enctype="form/multipart" method="POST">
+        <label for="image.file">Image File: <span class='help'>the image file to store and display.</span></label><br/>
+        <input type="file" name="image.file" id="image.file" required /><br/>
+        <label for="image.title">Image Title: <span class='help'>the title that will be used when referring to the image in themes.</span></label><br />
+        <input type="text" name="image.title" id="image.title" /><br/>
+        <label for="image.tags">Image Tags: <span class='help'>the tags associated with this image.</span></label><br/>
+        <input type="text" name="image.tags" id="image.tags" /><br/>
+        <input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
+      </form>
+              </div>
+              <div class="look">
+                %s
+              </div>
+            </div>
+          </span>""" % (self.request.path, self.ws.site.images_for_use()))
           # css for admin items
           admin_html.append("""<style>div.admin {display: none; position: absolute; height: 480px; width: 640px; background: #333; left: 300px; top: 20px; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           div.admin textarea{width: 630px; height: 120px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
