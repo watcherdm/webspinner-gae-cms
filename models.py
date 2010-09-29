@@ -48,7 +48,7 @@ def to_dict(model):
   return output
 
 class WsModel(ROTModel):
-  
+
   @classmethod
   def update(cls, dict_values):
     if "key" in dict_values:
@@ -71,6 +71,68 @@ class WsModel(ROTModel):
       return model
     else:
       return None
+  @classmethod
+  def to_edit_list(cls, display_field_name = "name"):
+    models = cls.all().fetch(1000)
+    html_out = "<br />".join(["<a href='/admin/edit/%s/%s'>%s</a>" % (cls.__name__.lower(), model.key(), getattr(model, display_field_name)) for model in models])
+    return html_out
+
+  @classmethod
+  def to_form(cls, return_url, mode = "add", model_key = None):
+    html_out = ""
+    if model_key:
+      model = cls.get(model_key)
+      html_out += "<form action='/admin/%s/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), model_key, return_url)
+    else:
+      model = cls()
+      html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
+    for field in model._modfields:
+      key = field["name"]
+      type = field["type"]
+      if key in model.properties():
+        finame = cls.__name__.lower() + "." + key
+        html_out += "<label for'%s'>%s</label>" % (finame, cls.__name__ + " " + key.capitalize() + ":")
+        textfields = ["text","email","password","url","tel"]
+        value = getattr(model, key)
+        value = value if value != None else ""
+        if type in textfields:
+          html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % (type, finame, finame, value)
+        elif type == "textlist":
+          value = ", ".join(value)
+          html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % ("text", finame, finame, value)
+        elif type == "textarea":
+          html_out += "<textarea name='%s' id='%s'>%s</textarea>" % (finame,finame, value)
+        elif type == "select":
+          if "list" in field:
+            if field["list"] in globals():
+              object_type = globals()[field["list"]]
+              objects = object_type.all().fetch(1000)
+              def build_option(object):
+                if object.key() == model.key():
+                  return ""
+                in_val = ""
+                if field["list_val"] == "key":
+                  selected = " selected " if object == value else ""
+                  in_val = object.key()
+                else:
+                  selected = " selected " if getattr(object, field["list_val"]) == value else ""
+                  in_val = getattr(object, field["list_val"])
+                option_out = "<option value='%s' %s>%s</option>" % (in_val, selected, getattr(object, field["list_name"]))
+                return option_out
+              if field["list_name"] in object_type.properties():
+                html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "<option value='None'>-- None --</option>" + "".join(map(build_option, objects)))
+              else:
+                html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, ["<option value='%s'>%s</option>" % (object.key(), object.key().id()) for object in objects])
+            else:
+              html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "".join(["<option value='%s'>%s</option>" % (x, x) for x in value.split(",")]))
+        elif type == "checkbox":
+          checked = " checked " if value else ""
+          html_out += "<input type='%s' name='%s' id='%s' %s />" % (type, finame, finame, checked)
+        else:
+          html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % (model._modfields[key], finame, finame, value)
+      html_out += "<br />"
+    html_out += "<input type='submit' name='%s.submit' id='%s.submit' value='Save' /></form>" % (cls.__name__.lower(), cls.__name__.lower())
+    return html_out
 
 ACTIONS = ['view','edit']
 
@@ -164,7 +226,7 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
         perm.put()
         perm_set.append(perm)
     return perm_set
-    
+
   def images_for_use(self):
     images = db.get(self.images)
     html_out = "<ul class='image_selector'>"
@@ -172,8 +234,8 @@ div.footer{float: left; display: block; width: 960px; padding: 5px 20px; backgro
       html_out += "<li><img src='/images/%s/s' title='%s' /></li>" % (image.name, image.title)
     html_out += "</ul>"
     return html_out
-    
-        
+
+
 class Role(WsModel):
   """ Role defines the different available user roles"""
   name = db.StringProperty()
@@ -198,15 +260,15 @@ class Permission(WsModel):
   """ Permission assigns an action type with a role and is used in content elements to associate a user with the actions he can take"""
   type = db.StringProperty()
   role = db.ReferenceProperty(Role)
-  
+
   @classmethod
   def get_for_role(cls, role):
     return cls.all().filter("role",role).fetch(100)
-  
+
   @classmethod
   def get_for_action(cls, action):
     return cls.all().filter("type", action).fetch(100)
-  
+
   @classmethod
   def get_table(cls):
     roles = Role.all().fetch(100)
@@ -221,8 +283,17 @@ class Permission(WsModel):
     html_out += "</table>"
     return html_out
 
-class User(WsModel):   
+class User(WsModel):
   """ User contains the user information necessary to login as well as profile data"""
+  _modfields = [{'name':"email", 'type':"email"},
+    {'name':"firstname",'type':"text"},
+    {"name":"lastname","type":"text"},
+    {"name":"spouse","type":"text"},
+    {"name":"address","type":"textarea"},
+    {"name":"phone","type":"tel"},
+    {"name":"fax","type":"tel"},
+    {"name":"url","type":"url"},
+    {"name":"tags","type":"textlist"}]
   oauth = db.UserProperty()
   email = db.EmailProperty()
   password = db.StringProperty()
@@ -245,6 +316,10 @@ class User(WsModel):
     result = False if sha256("%s%s%s" % (site_secret, random_key, password)).hexdigest() != user.password else user.key()
     return result
   @classmethod
+  def create(cls, dict_values):
+    return False
+
+  @classmethod
   def create_user(cls, email, password, user = None):
     site_secret = Site.all().get().secret
     random_key = str(random())
@@ -255,7 +330,7 @@ class User(WsModel):
     new_user.salt = random_key
     new_user.put()
     return new_user
-    
+
 class ThemePackage(WsModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
   name = db.StringProperty()
@@ -269,8 +344,8 @@ class ThemePackage(WsModel):
     return theme_package
 
 class Theme(WsModel):
-  """ Theme relieves the need for static file upload 
-    Each theme element contains the complete html, css and js 
+  """ Theme relieves the need for static file upload
+    Each theme element contains the complete html, css and js
     for the space the element is intended to fill."""
   name = db.StringProperty()
   html = db.TextProperty()
@@ -299,14 +374,25 @@ class Theme(WsModel):
       return theme
     else:
       return None
-    
+
 
 class Page(WsModel):
   """ Page is a wrapper class for each logical page in the cms website
   """
+  _modfields = [{"name":"name","type":"text"},
+    {"name":"ancestor","type":"select","list":"Page","list_val":"key","list_name":"title"},
+    {"name":"title","type":"text"},
+    {"name":"menu_name","type":"text"},
+    {"name":"visible","type":"checkbox"},
+    {"name":"tags","type":"textlist"},
+    {"name":"keywords","type":"textlist"},
+    {"name":"description","type":"textarea"}
+  ]
   name = db.StringProperty()
   ancestor = db.SelfReferenceProperty()
   title = db.StringProperty()
+  keywords = db.StringListProperty()
+  description = db.StringProperty()
   menu_name = db.StringProperty()
   theme = db.ReferenceProperty(Theme)
   sections = db.ListProperty(db.Key)
@@ -346,7 +432,7 @@ class Page(WsModel):
       return result[0]
     else:
       return None
-    
+
 
   @classmethod
   def get_by_page_chain(cls, page_chain):
@@ -370,7 +456,7 @@ class Page(WsModel):
       blocks_expression = '{%% block %s %%}{%% endblock %%}' % section.name
       page_html = re.sub(blocks_expression, section.theme.html, page_html)
     return page_html
-      
+
   def get_or_make_sections(self):
     blocks_expression = '{% block (section_[a-z]+) %}{% endblock %}'
     sections = re.findall(blocks_expression, self.theme.html)
@@ -387,7 +473,7 @@ class Page(WsModel):
         result.append(is_section)
     self.put()
     return result
-  
+
 
 class Section(ROTModel):
   """ Section is a wrapper class for the each logical section in a page.
@@ -420,7 +506,7 @@ class Section(ROTModel):
         theme_package.put()
     section.add_content("Hello World!", "hi there")
     return section
-    
+
   @classmethod
   def get_by_name(cls, name):
     result = cls.all().filter("name", name).fetch(1)
@@ -442,7 +528,7 @@ class Section(ROTModel):
     self.contents.append(content_object.key())
     self.put()
     return content_object
-    
+
   def contents_by(self, method):
     contents = db.get(self.contents)
     return contents
@@ -450,7 +536,7 @@ class Section(ROTModel):
     return self.contents_by("-date_created")
 
 class Content(ROTModel):
-  """ Content is a wrapper class for the content elements in a section.  
+  """ Content is a wrapper class for the content elements in a section.
   """
   section = db.ReferenceProperty(Section)
   abstract = db.StringProperty()
@@ -470,7 +556,7 @@ class Content(ROTModel):
       return content
     else:
       return None
-    
+
 class Image(WsModel):
   """ Image is a wrapper class for the image elements in content """
   file = db.BlobProperty()

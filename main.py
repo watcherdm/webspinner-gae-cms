@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2010, Webspinner CMS
+Copyright (c) 2010, Webspinner Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -53,6 +53,7 @@ class Webspinner():
     top_level_pages = filter(top_level, pages)
     for page in top_level_pages:
       html_out = add_page_to_menu(page, html_out)
+    html_out += "</ul>"
     return html_out
 
   class users:
@@ -63,7 +64,7 @@ class Webspinner():
         return user
       else:
         return None
-        
+
     @classmethod
     def is_current_user_admin(cls, handler):
       if u'user' in handler.session:
@@ -75,20 +76,20 @@ class Webspinner():
           return False
       else:
         return False
-          
+
     @classmethod
     def create_login_url(ws, return_page):
       return "/login?return_url=%s" % return_page
     @classmethod
     def create_logout_url(ws, return_page):
-      return "/logout?return_url=%s" %return_page  
- 
+      return "/logout?return_url=%s" %return_page
+
 class Handler(webapp.RequestHandler):
   def __init__(self):
     self.ws = Webspinner()
     self.session = sessions.Session()
     self.actions = []
-    
+
   def json_out(self, data):
     self.response.headers.add_header("Content-Type","application/json")
     self.response.out.write(simplejson.dumps(data))
@@ -111,9 +112,11 @@ class Handler(webapp.RequestHandler):
     else:
       return True
       # default to show the page, no permissions is the same as anonymous
-    
+
 
 def admin(handler_method):
+  """ Admin required decorator
+  """
   def redirect_if_needed(self, *args, **kwargs):
     user = self.ws.users.get_current_user(self)
     if user == None:
@@ -155,31 +158,14 @@ class GetPage(Handler):
         user_control = self.ws.users.create_logout_url(path)
         user_label = "Logout"
         if self.ws.users.is_current_user_admin(self):
-          admin_html = ["<div class='admin_tools'>", 
+          admin_html = ["<div class='admin_tools'>",
             # page admin for current page
             """<span class="admin_tab">Admin Page
             <div class="admin page_wrapper">
               <div class="tab_strip"><span class="data_tab">Data</span><span class="look_tab">Looks</span><span class="secure_tab">Security</span>
               </div>
               <div class="data">
-              <form action="/admin/edit/page/%s?return_url=%s" method="POST">
-                <label for="page.name">Page Name: <span class='help'>how it appears in the url</span></label><br />
-                <input type="text" id="page.name" name="page.name" value="%s" required /><br />
-                <label for="page.ancestor">Parent Page: <span class='help'>which page this will appear under in the menu, if any.</span></label><br />
-                <select name="page.ancestor" id="page.ancestor">
-                <option value="None">-- None --</option>
-                %s
-                </select><br />
-                <label for="page.title">Page Title: <span class='help'>the title of the page shows in the browser title or tab title.</span></label><br />
-                <input type="text" name="page.title" id="page.title" value="%s" required /><br />
-                <label for="page.menu_name">Page Menu Name: <span class='help'>the name to appear in the menu listing.</span></label><br />
-                <input type="text" name="page.menu_name" id="page.menu_name" value="%s" required /><br />
-                <label for="page.visible">Visible?: <span class='help'>if the page is visible to any user besides administrators.</span></label><br />
-                <input type="checkbox" name="page.visible" id="page.visible" value="True" %s /><br />
-                <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
-                <input type="text" name="page.tags" id="page.tags" value="%s" /><br />
-                <input type="submit" name="page.submit" id="page.submit" />
-              </form>
+              %s
             </div>
             <div class="look">
               <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
@@ -196,7 +182,7 @@ class GetPage(Handler):
               </form>
             </div>
           </div>
-          </span>""" % (page.key(), self.request.path, page.name, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], page.title, page.menu_name, checked, ", ".join(page.tags), page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js, page.key(), self.request.path, Permission.get_table())]
+          </span>""" % (Page.to_form(self.request.path, "edit", page.key()), page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js, page.key(), self.request.path, Permission.get_table())]
           s = 0
           c = 0
           for section in db.get(page.sections):
@@ -236,8 +222,26 @@ class GetPage(Handler):
       <label for="page.tags">Tags: <span class='help'>the tags associated with this page.</span></label><br />
       <input type="text" name="page.tags" id="page.tags" /><br />
       <input type="submit" name="page.submit" id="page.submit" />
-    </form>         
+    </form>
           </div></span>""" % (self.request.path, ["<option value='%s'>%s</option>" % (upage.key(), upage.title) for upage in pages], checked))
+          # add page form
+          admin_html.append("""<span class="admin_tab">Users
+          <div class="admin user.add">
+            <div class="tab_strip">
+              <span class="data_tab">Data</span>
+              <span class="look_tab">List</span>
+              <span class="secure_tab">Me</span>
+            </div>
+            <div class="data">
+              %s
+            </div>
+            <div class="look">
+              %s
+            </div>
+            <div class="secure">
+              %s
+            </div>
+          </div></span>""" % (User.to_form(self.request.path), user.to_edit_list("email"), user.to_form(self.request.path, "edit", user.key() )))
           # image manager for the site
           admin_html.append("""<span class="admin_tab">Images
             <div class="admin image.add">
@@ -267,8 +271,8 @@ class GetPage(Handler):
           div.admin_tools {position: fixed; top: 10px left: 0px; text-align: left;}
           div.admin_tools>span {position: relative;left: 0px;padding: 6px; display: block; height: 20px; width: 150px; background: #333; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8); color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8); font-weight: bolder;margin-left: -15px; margin-top: 10px;}
           span.help {display: none;}
-          div.admin input[type=text], div.admin select,div.admin label{margin: 5px; width: 630px;}
-          
+          div.admin input, div.admin select,div.admin label{margin: 5px; width: 400px;}
+          div.admin input[type=checkbox] {width: 100px;}
           span.data_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           span.look_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           span.secure_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
@@ -290,13 +294,9 @@ if(!window.webspinner){
 webspinner.admin = (function(){
               return {
                 showPanel: function(e){
-                  console.log(this);
                   var tab = $(this).attr("class");
-                  console.log(tab);
                   tab = tab.replace("_tab", "");
-                  console.log(tab);
                   $(this).parents("div.admin").children(":not(.tab_strip)").hide();
-                  console.log($(this).parents("div.admin"));
                   $(this).parents(".admin").find("." + tab).show();
                 },
                 sendPermissions : function(e){
@@ -459,7 +459,7 @@ class EditItem(Handler):
           html_out += """<label for="%s">%s</label>
           <input type="file" name="%s" id="%s" value="%s" />
           """ % (type.lowercase() + "." + property, property.capitalize(), httype + "." + propertytype.lowercase() + "." + property, )
-        
+
   @admin
   def post(self, args):
     type = args.split("/")[0]
@@ -469,7 +469,7 @@ class EditItem(Handler):
       if cls:
         values = {}
         values["key"] = key
-        
+
         for k in self.request.arguments():
           value = self.request.get(k)
           if k.split('.')[-1] in cls().properties().keys():
@@ -489,7 +489,7 @@ class EditItem(Handler):
           self.response.out.write("Failed to update")
       else:
         self.response.out.write(self.request.get("return_url"))
-          
+
 
 class DeleteItem(Handler):
   @admin
@@ -506,7 +506,7 @@ class ExportItem(Handler):
     key = array_args[1]
     format = array_args[2]
     self.json_out(Site.export(key))
-    
+
 
 ROUTES = [('/admin', Administrate),
                     ('/admin/add/(.+)', AddItem),
