@@ -27,7 +27,7 @@ def to_dict(model):
     if value is None or isinstance(value, SIMPLE_TYPES):
       output[key] = value
     elif isinstance(value, datetime.date):
-        # Convert date/datetime to ms-since-epoch ("new Date()").
+      # Convert date/datetime to ms-since-epoch ("new Date()").
       ms = time.mktime(value.utctimetuple()) * 1000
       ms += getattr(value, 'microseconds', 0) / 1000
       output[key] = int(ms)
@@ -55,22 +55,42 @@ class WsModel(ROTModel):
       model = db.get(dict_values["key"])
       for key, property in model.properties().iteritems():
         if key in dict_values:
-          fitype = property.__class__().__str__()
+          fitype = property.__class__.__str__(property)
           if ".StringListProperty" in fitype:
-            dict_values[key] = dict_values[key].split(",")
+            dict_values[key] = "".join(dict_values[key]).split(",")
           elif ".BooleanProperty" in fitype:
             dict_values[key] = dict_values[key] != ""
           elif ".ReferenceProperty" in fitype:
             dict_values[key] = None if dict_values[key] == "None" else db.get(dict_values[key])
           elif ".ListProperty" in fitype:
-            dict_values[key] = [object.key() for object in db.get(dict_values.split(","))]
+            dict_values[key] = [object.key() for object in db.get(dict_values[key])]
           else:
-            dict_values[key] = dict_values[key].lstrip().rstrip()
+            dict_values[key] = "".join(dict_values[key])
           setattr(model, key, dict_values[key])
       model.put()
       return model
     else:
       return None
+  @classmethod
+  def create(cls, dict_values):
+    model = cls()
+    for key in dict_values:
+      if key in cls.properties():
+        fitype = cls.properties()[key].__class__().__str__()
+        if ".StringListProperty" in fitype:
+          dict_values[key] = "".join(dict_values[key]).split(",")
+        elif ".BooleanProperty" in fitype:
+          dict_values[key] = dict_values[key] != ""
+        elif ".ReferenceProperty" in fitype:
+          dict_values[key] = None if dict_values[key] == "None" else db.get(dict_values[key])
+        elif ".ListProperty" in fitype:
+          dict_values[key] = [object.key() for object in db.get(dict_values.split(","))]
+        else:
+          dict_values[key] = "".join(dict_values[key])
+        setattr(model, key, dict_values[key])
+    model.put()
+    return model
+
   @classmethod
   def to_edit_list(cls, display_field_name = "name"):
     models = cls.all().fetch(1000)
@@ -108,8 +128,9 @@ class WsModel(ROTModel):
               object_type = globals()[field["list"]]
               objects = object_type.all().fetch(1000)
               def build_option(object):
-                if object.key() == model.key():
-                  return ""
+                if model.is_saved():
+                  if object.key() == model.key():
+                    return ""
                 in_val = ""
                 if field["list_val"] == "key":
                   selected = " selected " if object == value else ""
@@ -144,6 +165,11 @@ def string_to_tags(site, tags):
 
 class Site(WsModel):
   """ Site is a wrapper class for all the site data."""
+  _modfields = [{"name":"admin","type":"email"},
+    {"name":"keywords","type":"textlist"},
+    {"name":"description","type":"email"},
+    {"name":"tags","type":"textlist"}
+  ]
   admin = db.EmailProperty()
   title = db.StringProperty()
   actions = db.StringListProperty()
@@ -270,15 +296,22 @@ class Permission(WsModel):
     return cls.all().filter("type", action).fetch(100)
 
   @classmethod
-  def get_table(cls):
+  def get_table(cls, page_key = None):
     roles = Role.all().fetch(100)
     site = Site.all().get()
     html_out = "<table><tr><td></td>"
     html_out += "".join(["<th>%s</th>" % action for action in site.actions])
     html_out += "</tr>"
+    if page_key:
+      page = db.get(page_key)
+    else:
+      page = {}
     for role in roles:
       html_out += "<tr><th>%s</th>" % role.name
-      html_out += "".join(["<td><input type='checkbox' name='page.permissions' id='page.permissions' value='%s'/></td>" % perm.key() for perm in cls.get_for_role(role)])
+      for perm in cls.get_for_role(role):
+        checked = perm.key() in page.permissions if page else False
+        checked = "checked" if checked else " "
+        html_out += "<td><input type='checkbox' name='page.permissions' id='page.permissions' value='%s' %s /></td>" % (perm.key(), checked)
       html_out += "</tr>"
     html_out += "</table>"
     return html_out
@@ -315,9 +348,6 @@ class User(WsModel):
     site_secret = site.secret
     result = False if sha256("%s%s%s" % (site_secret, random_key, password)).hexdigest() != user.password else user.key()
     return result
-  @classmethod
-  def create(cls, dict_values):
-    return False
 
   @classmethod
   def create_user(cls, email, password, user = None):
