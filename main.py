@@ -397,7 +397,7 @@ class ImageHandler(Handler):
     name = self.request.path.split('/')[2]
     image = Image.get_by_name(name)
     if image and image.file:
-      self.response.headers['Content-Type'] = 'image/JPEG'
+      self.response.headers['Content-Type'] = 'image/PNG'
       self.response.out.write(image.file)
     else:
       self.json_out({"name": name})
