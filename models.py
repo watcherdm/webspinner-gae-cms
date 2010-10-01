@@ -52,14 +52,14 @@ class WsModel(ROTModel):
   @classmethod
   def update(cls, dict_values):
     if "key" in dict_values:
-      model = db.get(dict_values["key"])
+      model = db.get("".join(dict_values["key"]))
       for key, property in model.properties().iteritems():
         if key in dict_values:
           fitype = property.__class__.__str__(property)
           if ".StringListProperty" in fitype:
             dict_values[key] = "".join(dict_values[key]).split(",")
           elif ".BooleanProperty" in fitype:
-            dict_values[key] = dict_values[key] != ""
+            dict_values[key] = "".join(dict_values[key]) != ""
           elif ".ReferenceProperty" in fitype:
             dict_values[key] = None if "".join(dict_values[key]) == "None" else db.get(dict_values[key])
           elif ".ListProperty" in fitype:
@@ -71,6 +71,7 @@ class WsModel(ROTModel):
       return model
     else:
       return None
+
   @classmethod
   def create(cls, dict_values):
     model = cls()
@@ -377,6 +378,10 @@ class Theme(WsModel):
   """ Theme relieves the need for static file upload
     Each theme element contains the complete html, css and js
     for the space the element is intended to fill."""
+  _modfields = [{"name":"name","type":"text"},
+    {"name":"html","type":"textarea"},
+    {"name":"css","type":"textarea"},
+    {"name":"js","type":"textarea"}]
   name = db.StringProperty()
   html = db.TextProperty()
   css = db.TextProperty()
