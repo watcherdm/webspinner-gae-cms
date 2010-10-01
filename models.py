@@ -61,7 +61,7 @@ class WsModel(ROTModel):
           elif ".BooleanProperty" in fitype:
             dict_values[key] = "".join(dict_values[key]) != ""
           elif ".ReferenceProperty" in fitype:
-            dict_values[key] = None if dict_values[key] == "None" else db.get(dict_values[key])
+            dict_values[key] = None if "".join(dict_values[key]) == "None" else db.get(dict_values[key])
           elif ".ListProperty" in fitype:
             dict_values[key] = [object.key() for object in db.get(dict_values[key])]
           else:
