@@ -207,14 +207,23 @@ class GetPage(Handler):
               </form>
             </div></span>""" % (section.name.replace("section_","").capitalize(),section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
             s += 1
-            for content in db.get(section.contents):
-              admin_html.append("""<span class="admin_tab">Admin Content %d<div class="admin content.edit">
-                <form action="/admin/edit/content/%s?return_url=%s" method="POST">
-                  <textarea name="content.content" id="content.content">%s</textarea>
-                  <input type="submit" name="content.submit" id="content.submit" value="Save Changes" />
-                </form>
-              </div></span>""" % (c, content.key(),self.request.path,  content.content))
-              c += 1
+            content = db.get(section.contents[0])
+            admin_html.append("""<span class="admin_tab">%s Content<div class="admin content_edit">
+            <div class="tab_strip">
+              <span class="data_tab">List</span>
+              <span class="look_tab">Edit</span>
+              <span class="secure_tab">Add</span>
+            </div>
+            <div class="data">
+              %s
+            </div>
+            <div class="look">
+              %s
+            </div>
+            <div class="secure">
+              %s
+            </div>
+            </div></span>""" % (section.name.replace("section_","").capitalize(), Content.to_edit_list("title"), Content.to_form(self.request.path,"edit",content.key(), section.key()), Content.to_form(self.request.path, rel_key = section.key())))
           # add page form
           admin_html.append("""
 <span class="admin_tab">Add New Page
@@ -224,7 +233,7 @@ class GetPage(Handler):
 </span>""" % (Page.to_form(self.request.path)))
           # add page form
           admin_html.append("""<span class="admin_tab">Users
-          <div class="admin user.add">
+          <div class="admin user_edit">
             <div class="tab_strip">
               <span class="data_tab">Data</span>
               <span class="look_tab">List</span>
@@ -286,6 +295,8 @@ $(function(){
               $("div.admin_tools").find("span").toggle(function(){$(this).find(">div").show().css("top", 100 - $(this).offset().top + "px")}, function(e){if($(e.srcElement).hasClass("admin_tab")){$(this).find("div:not(.tab_strip, .data)").hide().find(".data").show();}});
               $("div.admin_tools span div").click(function(e){e.stopPropagation(); return true;});
               $("div.admin_tools span div.admin>div.tab_strip>span").click(webspinner.admin.showPanel);
+              // webspinner.admin.ajaxedit("div.user_edit>div.look>a", "dev.user_edit>div.data");
+              webspinner.admin.ajaxedit("div.content_edit>div.data>a", "div.content_edit>div.look", function(){$("div.content_edit>div.tab_strip>span.look_tab").trigger("click");});
 })
 if(!window.webspinner){
   webspinner = {};
@@ -298,13 +309,15 @@ webspinner.admin = (function(){
                   $(this).parents("div.admin").children(":not(.tab_strip)").hide();
                   $(this).parents(".admin").find("." + tab).show();
                 },
-                sendPermissions : function(e){
-                  var form = $(this).parents("form");
-                  $(form).find("input[type=checkbox").each(function(){
-                    if ($(this).attr("checked")){
-                      result.push($(this).val());
-                    }
-                  });
+                ajaxedit: function(domselector, resultdestination, callback){
+                  $(domselector).click(function(){
+                    $.get($(this).attr("href"), function(data){
+                      $(resultdestination).html(data);
+                      console.log(data);
+                    });
+                    callback();
+                    return false;
+                  })
                 }
               }
 })()

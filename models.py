@@ -48,7 +48,8 @@ def to_dict(model):
   return output
 
 class WsModel(ROTModel):
-
+  _relfields = []
+  _modfields = []
   @classmethod
   def update(cls, dict_values):
     if "key" in dict_values:
@@ -66,8 +67,19 @@ class WsModel(ROTModel):
             dict_values[key] = [object.key() for object in db.get(dict_values[key])]
           else:
             dict_values[key] = "".join(dict_values[key])
-          setattr(model, key, dict_values[key])
+          if dict_values[key]:
+            setattr(model, key, dict_values[key])
       model.put()
+      if len(model._relfields) > 0:
+        name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+        if name in dict_values:
+          if model._relfields[0]["model"] in globals():
+            model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
+            if model_to and model._relfields[0]["field"] in model_to.properties():
+              list_model_keys = getattr(model_to, model._relfields[0]["field"])
+              list_model_keys.append(model.key())
+              setattr(model_to, model._relfields[0]["field"], list_model_keys)
+              model_to.put()
       return model
     else:
       return None
@@ -90,6 +102,16 @@ class WsModel(ROTModel):
           dict_values[key] = "".join(dict_values[key])
         setattr(model, key, dict_values[key])
     model.put()
+    if len(model._relfields) > 0:
+      name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+      if name in dict_values:
+        if model._relfields[0]["model"] in globals():
+          model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
+          if model_to and model._relfields[0]["field"] in model_to.properties():
+            list_model_keys = getattr(model_to, model._relfields[0]["field"])
+            list_model_keys.append(model.key())
+            setattr(model_to, model._relfields[0]["field"], list_model_keys)
+            model_to.put()
     return model
 
   @classmethod
@@ -99,7 +121,7 @@ class WsModel(ROTModel):
     return html_out
 
   @classmethod
-  def to_form(cls, return_url, mode = "add", model_key = None):
+  def to_form(cls, return_url, mode = "add", model_key = None, rel_key = None):
     html_out = ""
     if model_key:
       model = cls.get(model_key)
@@ -107,6 +129,9 @@ class WsModel(ROTModel):
     else:
       model = cls()
       html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
+    if rel_key and len(model._relfields) > 0:
+      name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+      html_out += "<input type='hidden' value='%s' name='%s' id='%s' />" % (rel_key, name, name)
     for field in model._modfields:
       key = field["name"]
       type = field["type"]
@@ -155,6 +180,23 @@ class WsModel(ROTModel):
       html_out += "<br />"
     html_out += "<input type='submit' name='%s.submit' id='%s.submit' value='Save' /></form>" % (cls.__name__.lower(), cls.__name__.lower())
     return html_out
+
+  @classmethod
+  def get_order_by_field(cls,keys = None, field = None, direction = "ASC"):
+    models = []
+    if keys is None:
+      models = cls().all().fetch(10000)
+    else:
+      models = db.get(keys)
+    if field in models[0].properties():
+      direction = True if direction == "DESC" else False
+      models = sorted(models, key = lambda model: getattr(model, field), reverse = direction)
+    return models
+
+  @classmethod
+  def get_newest(cls, keys = None):
+    return cls.get_order_by_field(keys, "date_created", "DESC")
+
 
 ACTIONS = ['view','edit']
 
@@ -386,30 +428,6 @@ class Theme(WsModel):
   html = db.TextProperty()
   css = db.TextProperty()
   js = db.TextProperty()
-  @classmethod
-  def create(cls, dict_values):
-    theme = cls()
-    theme.name = dict_values["name"]
-    theme.html = dict_values["html"]
-    theme.css = dict_values["css"]
-    theme.js = dict_values["js"]
-    theme.put()
-    return theme
-  @classmethod
-  def update(cls, dict_values):
-    theme = cls.get(dict_values["key"])
-    if theme:
-      theme.html = dict_values["html"]
-      theme.css = dict_values["css"]
-      theme.js = dict_values["js"]
-      theme.put()
-      pages = Page.all().filter("theme", theme).fetch(1000)
-      for page in pages:
-        sections = page.get_or_make_sections()
-      return theme
-    else:
-      return None
-
 
 class Page(WsModel):
   """ Page is a wrapper class for each logical page in the cms website
@@ -510,9 +528,14 @@ class Page(WsModel):
     return result
 
 
-class Section(ROTModel):
+class Section(WsModel):
   """ Section is a wrapper class for the each logical section in a page.
   """
+  _relfields = [{"model":"Page","field":"sections","value":"key","method":"add_section"}]
+  _modfields = [{"name":"name","type":"text"},
+    {"name":"theme","type":"select","list":"Theme","list_val":"key","list_name":"name"},
+    {"name":"visible","type":"checkbox"},
+    {"name":"tags","type":"textlist"}]
   name = db.StringProperty()
   theme = db.ReferenceProperty(Theme)
   permissions = db.ListProperty(db.Key)
@@ -550,30 +573,24 @@ class Section(ROTModel):
     else:
       return None
 
-  def add_content(self, content, abstract, user = None, tags = None):
-    content_object = Content()
-    content_object.abstract = abstract
-    content_object.content = content
-    content_object.created_by_user = user
-    if tags:
-      content_object.tags = tags
-    content_object.permissions = self.permissions
-    content_object.visible = self.visible
-    content_object.put()
-    self.contents.append(content_object.key())
+  def add_content(self, content_key):
+    self.contents.append(content_key)
     self.put()
-    return content_object
+    return content_key
 
-  def contents_by(self, method):
-    contents = db.get(self.contents)
-    return contents
   def contents_by_created(self):
-    return self.contents_by("-date_created")
+    return self.__class__.get_newest(self.contents)
 
-class Content(ROTModel):
+class Content(WsModel):
   """ Content is a wrapper class for the content elements in a section.
   """
-  section = db.ReferenceProperty(Section)
+  _relfields = [{"model":"Section","field":"contents","value":"key","method":"add_content"}]
+  _modfields = [{"name":"title","type":"text"},
+    {"name":"abstract","type":"textarea"},
+    {"name":"content","type":"textarea"},
+    {"name":"visible","type":"checkbox"},
+    {"name":"tags","type":"textlist"}]
+  title = db.StringProperty()
   abstract = db.StringProperty()
   content = db.TextProperty()
   permissions = db.ListProperty(db.Key)
@@ -582,15 +599,6 @@ class Content(ROTModel):
   created_by_user = db.ReferenceProperty(User)
   visible = db.BooleanProperty()
   tags = db.StringListProperty()
-  @classmethod
-  def update(cls, dict_values):
-    content = cls.get(dict_values["key"])
-    if content:
-      content.content = dict_values["content"]
-      content.put()
-      return content
-    else:
-      return None
 
 class Image(WsModel):
   """ Image is a wrapper class for the image elements in content """
