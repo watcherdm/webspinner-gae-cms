@@ -314,7 +314,7 @@ webspinner.admin = (function(){
         user_label = "Login"
       page_theme = page.theme
       #print page.build_template()
-      page_html = "<html><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>{{ admin_content }}</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js)
+      page_html = "<html manifest='/static/cache.manifest'><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>{{ admin_content }}</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js)
       page_template = template.Template(page_html)
       sections = db.get(page.sections)
       section_dict = {}
