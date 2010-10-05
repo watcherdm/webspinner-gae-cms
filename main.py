@@ -170,7 +170,8 @@ class GetPage(Handler):
         user_control = self.ws.users.create_logout_url(path)
         user_label = "Logout"
         if self.ws.users.is_current_user_admin(self):
-          admin_html = ["<div class='admin_tools'>",
+          admin_html = ["""<script src="/addons/tiny_mce/jquery.tinymce.js" type="text/javascript" ></script>"""]
+          admin_html += ["<div class='admin_tools'>",
             # page admin for current page
             """<span class="admin_tab">Admin Page
             <div class="admin page_wrapper">
@@ -180,12 +181,7 @@ class GetPage(Handler):
               %s
             </div>
             <div class="look">
-              <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
-                <textarea name="page.theme.html" id="page.theme.html">%s</textarea>
-                <textarea name="page.theme.css" id="page.theme.css">%s</textarea>
-                <textarea name="page.theme.js" id="page.theme.js">%s</textarea>
-                <input type="submit" name="page.theme.submit" value="Save Changes"/>
-              </form>
+              %s
             </div>
             <div class="secure">
               <form action="/admin/edit/page/%s?return_url=%s" method="POST">
@@ -194,7 +190,7 @@ class GetPage(Handler):
               </form>
             </div>
           </div>
-          </span>""" % (Page.to_form(self.request.path, "edit", page.key()), page.theme.key(), self.request.path, page.theme.html, page.theme.css, page.theme.js, page.key(), self.request.path, Permission.get_table(page.key()))]
+          </span>""" % (Page.to_form(self.request.path, "edit", page.key()), Theme.to_form(self.request.path, "edit", page.theme.key(), page.key()), page.key(), self.request.path, Permission.get_table(page.key()))]
           s = 0
           c = 0
           for section in db.get(page.sections):
@@ -223,14 +219,14 @@ class GetPage(Handler):
             <div class="secure">
               %s
             </div>
-            </div></span>""" % (section.name.replace("section_","").capitalize(), Content.to_edit_list("title"), Content.to_form(self.request.path,"edit",content.key(), section.key()), Content.to_form(self.request.path, rel_key = section.key())))
+            </div></span>""" % (section.name.replace("section_","").capitalize(), Content.to_edit_list("title", self.request.path), Content.to_form(self.request.path,"edit",content.key(), section.key()), Content.to_form(self.request.path, rel_key = section.key())))
           # add page form
           admin_html.append("""
 <span class="admin_tab">Add New Page
   <div class="admin page.add">
     %s
   </div>
-</span>""" % (Page.to_form(self.request.path)))
+</span>""" % (Page.to_form(self.request.path, rel_key = self.ws.site.key())))
           # add page form
           admin_html.append("""<span class="admin_tab">Users
           <div class="admin user_edit">
@@ -248,7 +244,7 @@ class GetPage(Handler):
             <div class="secure">
               %s
             </div>
-          </div></span>""" % (User.to_form(self.request.path), user.to_edit_list("email"), user.to_form(self.request.path, "edit", user.key() )))
+          </div></span>""" % (User.to_form(self.request.path), user.to_edit_list("email", self.request.path), user.to_form(self.request.path, "edit", user.key() )))
           # image manager for the site
           admin_html.append("""<span class="admin_tab">Images
             <div class="admin image.add">
@@ -297,6 +293,7 @@ $(function(){
               $("div.admin_tools span div.admin>div.tab_strip>span").click(webspinner.admin.showPanel);
               // webspinner.admin.ajaxedit("div.user_edit>div.look>a", "dev.user_edit>div.data");
               webspinner.admin.ajaxedit("div.content_edit>div.data>a", "div.content_edit>div.look", function(){$("div.content_edit>div.tab_strip>span.look_tab").trigger("click");});
+              $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
 })
 if(!window.webspinner){
   webspinner = {};
@@ -416,6 +413,15 @@ class ImageHandler(Handler):
     else:
       self.json_out({"name": name})
 
+class CssHandler(Handler):
+  def get(self, page):
+    if page == "":
+      page = "/"
+    page = Page.get_by_name(page)
+    if page:
+      self.response.headers.add_header("Content-Type","text/css")
+      self.response.out.write(page.theme.css)
+
 class AddItem(Handler):
   @admin
   def get(self, type):
@@ -508,16 +514,23 @@ class ExportItem(Handler):
     format = array_args[2]
     self.json_out(Site.export(key))
 
+class ListJavascript(Handler):
+  def get(self, type):
+    if type == "images":
+      self.response.headers.add_header("Content-Type","text/javascript")
+      self.response.out.write("var tinyMCEImageList = [%s]" % "".join(["['" + image.title + "','" + image.to_url() +"']" for image in db.get(self.ws.site.images)]))
 
 ROUTES = [('/admin', Administrate),
                     ('/admin/add/(.+)', AddItem),
                     ('/admin/edit/(.+)', EditItem),
                     ('/admin/delete/(.+)', DeleteItem),
                     ('/admin/download/(.+)', ExportItem),
+                    ('/admin/lists/(.+)', ListJavascript),
                     ('/login', Login),
                     ('/logout', Logout),
                     ('/install', Install),
                     ('/images/.*/[sbtl]', ImageHandler),
+                    ('/(.*)css', CssHandler),
                     ('/.*', GetPage),]
 
 

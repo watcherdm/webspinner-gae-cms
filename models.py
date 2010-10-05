@@ -17,7 +17,7 @@ import datetime
 import time
 
 SIMPLE_TYPES = (int, long, float, bool, dict, basestring)
-
+wysiwyg_plugin = "tinymce"
 def to_dict(model):
   output = {}
 
@@ -58,7 +58,7 @@ class WsModel(ROTModel):
         if key in dict_values:
           fitype = property.__class__.__str__(property)
           if ".StringListProperty" in fitype:
-            dict_values[key] = "".join(dict_values[key]).split(",")
+            dict_values[key] = [x.lstrip().rstrip() for x in "".join(dict_values[key]).split(",")]
           elif ".BooleanProperty" in fitype:
             dict_values[key] = "".join(dict_values[key]) != ""
           elif ".ReferenceProperty" in fitype:
@@ -75,11 +75,16 @@ class WsModel(ROTModel):
         if name in dict_values:
           if model._relfields[0]["model"] in globals():
             model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
-            if model_to and model._relfields[0]["field"] in model_to.properties():
-              list_model_keys = getattr(model_to, model._relfields[0]["field"])
-              list_model_keys.append(model.key())
-              setattr(model_to, model._relfields[0]["field"], list_model_keys)
-              model_to.put()
+            if model_to and len(model_to) > 0:
+              if model._relfields[0]["field"] in model_to[0].properties():
+                if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
+                  list_model_keys = getattr(model_to[0], model._relfields[0]["field"])
+                  list_model_keys.append(model.key())
+                  list_model_keys = list(set(list_model_key))
+                  setattr(model_to[0], model._relfields[0]["field"], list_model_keys)
+                else:
+                  setattr(model_to[0], model._relfields[0]["field"], model)
+                model_to[0].put()
       return model
     else:
       return None
@@ -89,15 +94,15 @@ class WsModel(ROTModel):
     model = cls()
     for key in dict_values:
       if key in cls.properties():
-        fitype = cls.properties()[key].__class__().__str__()
+        fitype = cls.properties()[key].__str__()
         if ".StringListProperty" in fitype:
-          dict_values[key] = "".join(dict_values[key]).split(",")
+          dict_values[key] = [x.lstrip().rstrip() for x in "".join(dict_values[key]).split(",")]
         elif ".BooleanProperty" in fitype:
           dict_values[key] = dict_values[key] != ""
         elif ".ReferenceProperty" in fitype:
-          dict_values[key] = None if dict_values[key] == "None" else db.get(dict_values[key])
+          dict_values[key] = None if "".join(dict_values[key]) == "None" else db.get(dict_values[key])
         elif ".ListProperty" in fitype:
-          dict_values[key] = [object.key() for object in db.get(dict_values.split(","))]
+          dict_values[key] = [object.key() for object in db.get("".join(dict_values[key]).split(","))]
         else:
           dict_values[key] = "".join(dict_values[key])
         setattr(model, key, dict_values[key])
@@ -107,17 +112,22 @@ class WsModel(ROTModel):
       if name in dict_values:
         if model._relfields[0]["model"] in globals():
           model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
-          if model_to and model._relfields[0]["field"] in model_to.properties():
-            list_model_keys = getattr(model_to, model._relfields[0]["field"])
-            list_model_keys.append(model.key())
-            setattr(model_to, model._relfields[0]["field"], list_model_keys)
-            model_to.put()
+          if model_to:
+            if model._relfields[0]["field"] in model_to.properties():
+              if ".ListProperty" in model_to.properties()[model._relfields[0]["field"]].__str__():
+                list_model_keys = getattr(model_to, model._relfields[0]["field"])
+                list_model_keys.append(model.key())
+                list_model_keys = list(set(list_model_keys))
+                setattr(model_to, model._relfields[0]["field"], list_model_keys)
+              else:
+                setattr(model_to, model._relfields[0]["field"], model)
+              model_to.put()
     return model
 
   @classmethod
-  def to_edit_list(cls, display_field_name = "name"):
+  def to_edit_list(cls, display_field_name = "name", return_url = "/"):
     models = cls.all().fetch(1000)
-    html_out = "<br />".join(["<a href='/admin/edit/%s/%s'>%s</a>" % (cls.__name__.lower(), model.key(), getattr(model, display_field_name)) for model in models])
+    html_out = "<br />".join(["<a href='/admin/edit/%s/%s?return_url=%s'>%s</a>" % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) for model in models])
     return html_out
 
   @classmethod
@@ -148,6 +158,8 @@ class WsModel(ROTModel):
           html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % ("text", finame, finame, value)
         elif type == "textarea":
           html_out += "<textarea name='%s' id='%s'>%s</textarea>" % (finame,finame, value)
+        elif type == "textareahtml":
+          html_out += "<textarea name='%s' id='%s' class='%s'>%s</textarea>" % (finame,finame, wysiwyg_plugin, value)
         elif type == "select":
           if "list" in field:
             if field["list"] in globals():
@@ -234,15 +246,15 @@ class Site(WsModel):
     site.keywords = ['webspinner inc.']
     site.tags = ['cms']
     site.secret = str(random())
-    page = Page.create({"name":"/","ancestor":None,"title":"Default Webspinner Page","menu_name":"Home","visible":True, "page_chain":"/","tags": site.tags})
-    main_theme = Theme.create({"name": "default", "html":"""
+    page = Page.create({"name":["/"],"ancestor":["None"],"title":["Default Webspinner Page"],"menu_name":["Home"],"visible":[True], "page_chain":"/","tags": site.tags})
+    main_theme = Theme.create({"name": ["default"], "html":["""
 <div class="wrapper">
   <div class="header"><h1>{{ page.title }}</h1></div>
   <div class="nav">{{ ws.get_nav_list }} {{ user_control_link }}</div>
   <div class="content">{% block section_main %}{% endblock %}</div>
   <div class="footer">Copyright 2010 Webspinner Inc.</div>
 </div>
-    ""","css":"""
+    """],"css":["""
 body{background: #eee; color: #111; font-family: Helvetica, Arial, SanSerif;text-align: center;}
 div.wrapper{display: block; margin-left: auto; margin-right: auto; width: 960px;}
 div.header{padding: 20px; display: block; text-align: left; width: 960px; background: #333; float: left;}
@@ -256,11 +268,11 @@ div.nav ul.site_menu li.menu_item a.menu_item_link:hover{text-decoration: none; 
 div.nav ul.site_menu li.menu_item a.menu_item_link:visited{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
 div.nav ul.site_menu li.menu_item a.menu_item_link:active{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.9);}
 div.footer{float: left; display: block; width: 960px; padding: 5px 20px; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1))); font-weight: bolder; color: rgba(255,255,255,1)}
-    ""","js":""})
+    """],"js":[""]})
     page.theme = main_theme
     page.put()
     sections = page.get_or_make_sections()
-    theme_packages = ThemePackage.create({"name":"default","themes":[main_theme.key()]})
+    theme_packages = ThemePackage.create({"name":["default"],"themes":[",".join([str(main_theme.key())])]})
     site.theme_packages.append(theme_packages.key())
     site.pages.append(page.key())
     site.put()
@@ -406,12 +418,14 @@ class User(WsModel):
 
 class ThemePackage(WsModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
+  _modfields = [{"name":"name","type":"text"},
+    {"name":"themes","type":"selectmulti","list":"Theme","list_val":"key","list_name":"name"}]
   name = db.StringProperty()
   themes = db.ListProperty(db.Key)
   @classmethod
-  def create(cls, dict_values):
+  def old_create(cls, dict_values):
     theme_package = cls()
-    theme_package.name = dict_values["name"]
+    theme_package.name = "".join(dict_values["name"])
     theme_package.themes = dict_values["themes"]
     theme_package.put()
     return theme_package
@@ -420,8 +434,9 @@ class Theme(WsModel):
   """ Theme relieves the need for static file upload
     Each theme element contains the complete html, css and js
     for the space the element is intended to fill."""
+  _relfields = [{"model":"Page","field":"theme","value":"key"}]
   _modfields = [{"name":"name","type":"text"},
-    {"name":"html","type":"textarea"},
+    {"name":"html","type":"textareahtml"},
     {"name":"css","type":"textarea"},
     {"name":"js","type":"textarea"}]
   name = db.StringProperty()
@@ -432,6 +447,7 @@ class Theme(WsModel):
 class Page(WsModel):
   """ Page is a wrapper class for each logical page in the cms website
   """
+  _relfields = [{"model":"Site","field":"pages","value":"key"}]
   _modfields = [{"name":"name","type":"text"},
     {"name":"ancestor","type":"select","list":"Page","list_val":"key","list_name":"title"},
     {"name":"title","type":"text"},
@@ -454,7 +470,7 @@ class Page(WsModel):
   tags = db.StringListProperty()
   page_chain = db.StringListProperty()
   @classmethod
-  def create(cls, dict_values):
+  def old_create(cls, dict_values):
     mainpage = Page.all().get()
     page = cls()
     page.name = dict_values['name']
@@ -531,7 +547,7 @@ class Page(WsModel):
 class Section(WsModel):
   """ Section is a wrapper class for the each logical section in a page.
   """
-  _relfields = [{"model":"Page","field":"sections","value":"key","method":"add_section"}]
+  _relfields = [{"model":"Page","field":"sections","value":"key"}]
   _modfields = [{"name":"name","type":"text"},
     {"name":"theme","type":"select","list":"Theme","list_val":"key","list_name":"name"},
     {"name":"visible","type":"checkbox"},
@@ -562,7 +578,12 @@ class Section(WsModel):
       if page.theme.key() in theme_package.themes:
         theme_package.themes.append(section.theme.key())
         theme_package.put()
-    section.add_content("Hello World!", "hi there")
+    content = Content.create({"title":["Hello World"],
+      "abstract":["hi there"],
+      "content":["Use the menu on the left to modify the page and it's contents."],
+      "visible":["on"],
+      "tags":"cms"})
+    section.add_content(content.key())
     return section
 
   @classmethod
@@ -587,7 +608,7 @@ class Content(WsModel):
   _relfields = [{"model":"Section","field":"contents","value":"key","method":"add_content"}]
   _modfields = [{"name":"title","type":"text"},
     {"name":"abstract","type":"textarea"},
-    {"name":"content","type":"textarea"},
+    {"name":"content","type":"textareahtml"},
     {"name":"visible","type":"checkbox"},
     {"name":"tags","type":"textlist"}]
   title = db.StringProperty()
@@ -606,16 +627,18 @@ class Image(WsModel):
   title = db.StringProperty()
   name = db.StringProperty()
   tags = db.StringListProperty()
+  def to_url(self):
+    return "/images/%s/s" % self.name
   @classmethod
   def get_by_name(cls, name):
     return cls.all().filter("name =", str(name)).fetch(1)[0]
   @classmethod
   def create(cls, dict_values):
     img = cls()
-    img.file = dict_values["file"]
-    img.title = dict_values["title"]
+    img.file = "".join(dict_values["file"])
+    img.title = "".join(dict_values["title"])
     img.name = str(random()).split('.')[-1]
-    img.tags = dict_values['tags']
+    img.tags = [x.lstrip().rstrip() for x in "".join(dict_values['tags']).split(",")]
     img.put()
     site = Site.all().get()
     site.images.append(img.key())
