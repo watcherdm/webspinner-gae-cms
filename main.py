@@ -116,7 +116,7 @@ class Handler(webapp.RequestHandler):
       if len(actions) == 0:
         return False
       else:
-        return actions
+        return True
     else:
       return True
       # default to show the page, no permissions is the same as anonymous
@@ -158,7 +158,7 @@ class GetPage(Handler):
     page = Page.get_by_name(path)
     if not self.permission_check(page):
       self.error(403)
-      self.response.out.write("You are not authorized to view this page")
+      self.redirect(self.ws.users.create_login_url(path))
       return False
     pages = Page.all().fetch(100)
     admin_html = []
@@ -352,6 +352,9 @@ webspinner.admin = (function(){
 })()
           </script>""")
           admin_html.append("</div>")
+        else:
+          # user is not an administrator but is still logged in, need to check if edit is enabled.
+          x = x
       else:
         user_control = self.ws.users.create_login_url(path)
         user_label = "Login"
@@ -368,7 +371,7 @@ webspinner.admin = (function(){
       template_values = {"site_users": site_users, "ws":self.ws,"page": page, "sections": section_dict, "user_control_link": user_control_link, 'admin_content': "".join(admin_html)}
       self.render_string_out(page_template, template_values)
     else:
-      self.error(404) #self.json_out({'page_chain':page_chain,'query_chain':query_chain_kv})
+      self.error(404)
 
 class Install(Handler):
 

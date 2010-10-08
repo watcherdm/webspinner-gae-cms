@@ -29,6 +29,10 @@ handlers:
 - url: /yui/.*
   script: $PYTHON_LIB/google/appengine/ext/zipserve
 
+- url: /(.*\.htc)
+  static_files: ie/\1
+  mime_type: text/x-component
+
 - url: /.*
   script: main.py
 
