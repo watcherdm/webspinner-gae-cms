@@ -80,7 +80,7 @@ class WsModel(ROTModel):
                 if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
                   list_model_keys = getattr(model_to[0], model._relfields[0]["field"])
                   list_model_keys.append(model.key())
-                  list_model_keys = list(set(list_model_key))
+                  list_model_keys = list(set(list_model_keys))
                   setattr(model_to[0], model._relfields[0]["field"], list_model_keys)
                 else:
                   setattr(model_to[0], model._relfields[0]["field"], model)
@@ -257,7 +257,9 @@ class Site(WsModel):
     """],"css":["""
 body{background: #eee; color: #111; font-family: Helvetica, Arial, SanSerif;text-align: center;}
 div.wrapper{display: block; margin-left: auto; margin-right: auto; width: 960px;}
-div.header{padding: 20px; display: block; text-align: left; width: 960px; background: #333; float: left;}
+div.header{
+border-top-left-radius: 20px; border-top-right-radius: 20px;
+padding: 20px; display: block; text-align: left; width: 960px; background: #333; float: left;}
 div.header h1{color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,1);}
 div.content{background: #fff; color: #111; display: block; float: left; width: 960px; padding: 20px; text-align: left;}
 div.nav{width: 1000px; padding: 0px ; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1)));display: block; float: left;}
@@ -267,8 +269,20 @@ div.nav ul.site_menu li.menu_item a.menu_item_link:link{display: block; float: l
 div.nav ul.site_menu li.menu_item a.menu_item_link:hover{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 2px 1px rgba(0,0,0,.9);}
 div.nav ul.site_menu li.menu_item a.menu_item_link:visited{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
 div.nav ul.site_menu li.menu_item a.menu_item_link:active{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.9);}
-div.footer{float: left; display: block; width: 960px; padding: 5px 20px; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1))); font-weight: bolder; color: rgba(255,255,255,1)}
-    """],"js":[""]})
+div.footer{float: left; display: block; width: 960px; padding: 5px 20px; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1))); font-weight: bolder; color: rgba(255,255,255,1);border-bottom-left-radius: 20px;border-bottom-right-radius: 20px;}
+div.nav>a:link{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:active{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:hover{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+    """],"js":["""
+if(!window.cms){
+  cms = (function(window,document,undefined){
+    return {
+      test: function(){console.log("Hello CMS World!");}
+    }
+  })(window, window.document);
+}
+    """]})
     page.theme = main_theme
     page.put()
     sections = page.get_or_make_sections()
@@ -531,15 +545,9 @@ class Page(WsModel):
     sections = re.findall(blocks_expression, self.theme.html)
     result = []
     for section in sections:
-      is_section = Section.get_by_name(section)
-      if is_section:
-        if not is_section.key() in self.sections:
-          self.sections.append(is_section.key())
-        result.append(is_section)
-      else:
-        is_section = Section.create({"page":self.key(), "name": section})
-        self.sections.append(is_section.key())
-        result.append(is_section)
+      is_section = Section.create({"page":self.key(), "name": section})
+      self.sections.append(is_section.key())
+      result.append(is_section)
     self.put()
     return result
 
@@ -580,7 +588,7 @@ class Section(WsModel):
         theme_package.put()
     content = Content.create({"title":["Hello World"],
       "abstract":["hi there"],
-      "content":["Use the menu on the left to modify the page and it's contents."],
+      "content":["If you are logged in as an administratir use the menu on the left to modify the page and it's contents."],
       "visible":["on"],
       "tags":"cms"})
     section.add_content(content.key())

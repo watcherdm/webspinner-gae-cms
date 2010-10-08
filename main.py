@@ -42,7 +42,7 @@ class Webspinner():
       else:
         return False
     def add_page_to_menu(page, html_out):
-      html_out += "<li class='menu_item'><a href='%s' class='menu_item_link'>%s</a>" % ("/".join(page.page_chain), page.menu_name)
+      html_out += "<li class='menu_item'><a href='%s' class='menu_item_link'>%s</a>" % (page.name, page.menu_name)
       children = filter(lambda x: x.ancestor == page, pages)
       if children:
         html_out += "<ul>"
@@ -163,6 +163,38 @@ class GetPage(Handler):
     pages = Page.all().fetch(100)
     admin_html = []
     if page:
+      if not page.theme:
+        page.theme = Theme.create({"name": ["default" + page.name], "html":["""
+<div class="wrapper">
+  <div class="header"><h1>{{ page.title }}</h1></div>
+  <div class="nav">{{ ws.get_nav_list }} {{ user_control_link }}</div>
+  <div class="content">{% block section_main %}{% endblock %}</div>
+  <div class="footer">Copyright 2010 Webspinner Inc.</div>
+</div>
+    """],"css":["""
+body{background: #eee; color: #111; font-family: Helvetica, Arial, SanSerif;text-align: center;}
+div.wrapper{display: block; margin-left: auto; margin-right: auto; width: 960px;}
+div.header{
+border-top-left-radius: 20px; border-top-right-radius: 20px;
+padding: 20px; display: block; text-align: left; width: 960px; background: #333; float: left;}
+div.header h1{color: #fff; text-shadow: 1px 1px 1px rgba(0,0,0,1);}
+div.content{background: #fff; color: #111; display: block; float: left; width: 960px; padding: 20px; text-align: left;}
+div.nav{width: 1000px; padding: 0px ; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1)));display: block; float: left;}
+div.nav ul.site_menu{list-style-type: none; margin: 0px; padding: 0px;}
+div.nav ul.site_menu li.menu_item{display: block; padding: 0px; float: left;}
+div.nav ul.site_menu li.menu_item a.menu_item_link:link{display: block; float: left; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:hover{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 2px 1px rgba(0,0,0,.9);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:visited{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav ul.site_menu li.menu_item a.menu_item_link:active{text-decoration: none; color: #fff; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.9);}
+div.footer{float: left; display: block; width: 960px; padding: 5px 20px; background: -webkit-gradient(linear,0 0, 0 100%, from(rgba(100,100,100,1)), to(rgba(180,180,180,1))); font-weight: bolder; color: rgba(255,255,255,1);border-bottom-left-radius: 20px;border-bottom-right-radius: 20px;}
+div.nav>a:link{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:active{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:hover{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+    """],"js":[""]})
+        page.put()
+      if not page.sections:
+        page.get_or_make_sections()
       if "visible" in page.properties():
         checked = "checked" if page.visible else ""
       user = self.ws.users.get_current_user(self)
