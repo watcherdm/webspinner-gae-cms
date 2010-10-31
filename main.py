@@ -105,13 +105,16 @@ class Handler(webapp.RequestHandler):
     anonrole = Role.all().filter("name", "Anonymous").get()
     if perms:
       user = self.ws.users.get_current_user(self)
+      if not user:
+        return False
       actions = []
       if self.ws.users.is_current_user_admin(self):
         return True
       for perm in perms:
         if perm.role.key() == anonrole.key():
           actions.append(perm.type)
-        if user in perm.role.users:
+          return True
+        if user.key() in perm.role.users:
           actions.append(perm.type)
       if len(actions) == 0:
         return False
@@ -156,6 +159,9 @@ class GetPage(Handler):
       return {x[0]: x[1]}
     query_chain_kv = map(kv_q, query_chain)
     page = Page.get_by_name(path)
+    if not page:
+      self.error(404)
+      return False
     if not self.permission_check(page):
       self.error(403)
       self.redirect(self.ws.users.create_login_url(path))
@@ -312,49 +318,120 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           span.look_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           span.secure_tab{position: relative; top: -23px; border: solid 3px #fff; border-bottom: none; background: #333;padding: 4px 10px ; margin-left: 5px; margin-right: 5px; color: #fff; text-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           div.admin a {text-decoration: none; color: #fff;}
-          div.admin div.data {}
-          div.admin div.look {display: none;}
-          div.admin div.secure {display: none;}
+          div.admin div.data {height: 480px; overflow: auto;}
+          div.admin div.look {display: none;height: 480px; overflow: auto;}
+          div.admin div.secure {display: none;height: 480px; overflow: auto;}
           div.secure table{color: white; width: 100%;}
           </style>""")
           # javascript for admin items
           admin_html.append("""<script type="text/javascript">
 $(function(){
-              $("div.admin_tools").find("span").toggle(function(){$(this).find(">div").show().css("top", 100 - $(this).offset().top + "px")}, function(e){if($(e.srcElement).hasClass("admin_tab")){$(this).find("div:not(.tab_strip, .data)").hide().find(".data").show();}});
+              $("div.admin_tools").find("span").toggle(function(){
+                  $('div.admin').hide();
+                  var $this = $(this).find(">div");
+                  $this.show('fast').css("top", 100 - $(this).offset().top + "px")
+                  $('body').click(function(){;$this.hide();})
+                },
+                function(e){
+                  if($(e.srcElement).hasClass("admin_tab")){
+                    $(this).find("div:not(.tab_strip, .data)").hide('fast').find(".data").show();
+                  }
+                });
               $("div.admin_tools span div").click(function(e){e.stopPropagation(); return true;});
-              $("div.admin_tools span div.admin>div.tab_strip>span").click(webspinner.admin.showPanel);
-              // webspinner.admin.ajaxedit("div.user_edit>div.look>a", "dev.user_edit>div.data");
-              webspinner.admin.ajaxedit("div.content_edit>div.data>a", "div.content_edit>div.look", function(){$("div.content_edit>div.tab_strip>span.look_tab").trigger("click");});
+              $("div.admin_tools span div.admin>div.tab_strip>span").show_panel();
+              $("div.content_edit>div.data>a").ajax_edit({
+                result:"div.content_edit>div.look",
+                callback: function(){$("div.content_edit>div.tab_strip>span.look_tab").trigger("click");}
+              });
               $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
 })
+$.plugin = {
+  addFunction : function(name, object){
+    $.fn[name] = function(options){
+      var args = Array.prototype.slice.call(arguments, 1);
+      if(this.length){
+        return this.each(function(){
+          var instance = $.data(this, name);
+          if(instance){
+            instance[options].apply(instance, args);
+          }else{
+            instance = $.data(this, name, Object.create(object).init(options, this));
+          }
+        });
+      }else{
+        return this;
+      }
+    }
+  },
+  removeFunction : function(name){
+    delete $.fn[name];
+  },
+  listFunctions : function(){
+    for(k in $.fn){
+      if(typeof $.fn[k] === "function"){
+        console.log(k);
+      }
+    }
+  }
+}
+
+// webspinner.admin jquery plugins
 if(!window.webspinner){
   webspinner = {};
 }
-webspinner.admin = (function(){
-              return {
-                showPanel: function(e){
-                  var tab = $(this).attr("class");
-                  tab = tab.replace("_tab", "");
-                  $(this).parents("div.admin").children(":not(.tab_strip)").hide();
-                  $(this).parents(".admin").find("." + tab).show();
-                },
-                ajaxedit: function(domselector, resultdestination, callback){
-                  $(domselector).click(function(){
-                    $.get($(this).attr("href"), function(data){
-                      $(resultdestination).html(data);
-                      console.log(data);
-                    });
-                    callback();
-                    return false;
-                  })
-                }
-              }
-})()
+webspinner.admin = {
+    show_panel: {
+      init: function(options, elem){
+        this.options = $.extend({}, this.options, options);
+        this.elem = elem;
+        this.$elem = $(elem);
+        this._build()
+      },
+      _build: function(){
+        this.$elem.click(function(e){
+          console.log('in the click method')
+          var $this = $(this);
+          $("div.admin_tab>div.admin").hide();
+          var tab = $this.attr("class").replace("_tab", "");
+          tab = tab;
+          $(this).parents("div.admin").show().children(":not(.tab_strip)").hide();
+          $(this).parents(".admin").find("." + tab).show();
+        });
+      }
+    },
+    ajax_edit: {
+      init: function(options, elem){
+        this.options = $.extend({}, this.options, options);
+        this.elem = elem;
+        this.$elem = $(elem);
+        this._build();
+      },
+      _build: function(){
+        var object = this;
+        this.$elem.click(function(){
+          $.get($(this).attr("href"), function(data){
+            $(object.options.result).html(data);
+            $(object.options.result).show();
+          });
+          if(typeof object.options.callback === "function"){
+            object.options.callback.apply(this);
+          }
+          return false;
+        })
+      },
+      options : {
+        result : null,
+        callback : function(){console.log("callback fired!")}
+      }
+    }
+  }
+$.plugin.addFunction('ajax_edit',  webspinner.admin.ajax_edit);
+$.plugin.addFunction('show_panel', webspinner.admin.show_panel);
           </script>""")
           admin_html.append("</div>")
-        else:
+        #else:
           # user is not an administrator but is still logged in, need to check if edit is enabled.
-          x = x
+          #x = x
       else:
         user_control = self.ws.users.create_login_url(path)
         user_label = "Login"
@@ -549,6 +626,20 @@ class ExportItem(Handler):
     format = array_args[2]
     self.json_out(Site.export(key))
 
+class EmailContent(Handler):
+  @admin
+  def get(self, *args):
+    # TODO: get a template together for listing the content articles that you may wish to send.
+    # TODO: Get roles and content for listing in the template
+
+    self.response.out.write(template.render('templates/email.html', {"args" : args}))
+  @admin
+  def post(self, *args):
+    # TODO: get a template together for email content and inject safe content into it.
+    self.response.out.write(self.request)
+    # TODO: send out emails to all email addresses in selected user listing
+    # TODO: capture any failure events and report them
+
 class ListJavascript(Handler):
   def get(self, type):
     if type == "images":
@@ -561,6 +652,7 @@ ROUTES = [('/admin', Administrate),
                     ('/admin/delete/(.+)', DeleteItem),
                     ('/admin/download/(.+)', ExportItem),
                     ('/admin/lists/(.+)', ListJavascript),
+                    ('/admin/email(.*)', EmailContent),
                     ('/login', Login),
                     ('/logout', Logout),
                     ('/install', Install),

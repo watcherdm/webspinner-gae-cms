@@ -32,6 +32,7 @@ handlers:
 - url: /(.*\.htc)
   static_files: ie/\1
   mime_type: text/x-component
+  upload: ie/(.*\.htc)
 
 - url: /.*
   script: main.py
