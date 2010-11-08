@@ -182,6 +182,7 @@ class WsModel(ROTModel):
                 html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "<option value='None'>-- None --</option>" + "".join(map(build_option, objects)))
               else:
                 html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, ["<option value='%s'>%s</option>" % (object.key(), object.key().id()) for object in objects])
+            elif field['list'] :
             else:
               html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "".join(["<option value='%s'>%s</option>" % (x, x) for x in value.split(",")]))
         elif type == "checkbox":
@@ -469,7 +470,8 @@ class Page(WsModel):
     {"name":"visible","type":"checkbox"},
     {"name":"tags","type":"textlist"},
     {"name":"keywords","type":"textlist"},
-    {"name":"description","type":"textarea"}
+    {"name":"description","type":"textarea"},
+    {"name":"order","type":"select","list":},
   ]
   name = db.StringProperty()
   ancestor = db.SelfReferenceProperty()

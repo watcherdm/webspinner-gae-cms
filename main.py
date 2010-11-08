@@ -35,7 +35,11 @@ class Webspinner():
 
   def get_nav_list(self):
     html_out = "<ul class='site_menu'>"
-    pages = db.get(self.site.pages)
+    pages = memcache.get('site-pages')
+    if not pages :
+        pages = db.get(self.site.pages)
+        pages.sort()
+        memcache.set('site-pages', pages)
     def top_level(page):
       if not page.ancestor:
         return True
