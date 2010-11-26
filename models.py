@@ -238,6 +238,18 @@ class Site(WsModel):
   images = db.ListProperty(db.Key)
   theme_packages = db.ListProperty(db.Key)
   @classmethod
+  def secret(cls):
+    secret = memcache.get("site_secret")
+    if secret:
+      return secret
+    else:
+      secret = cls.all().get().secret
+      if secret:
+        memcache.set("site_secret", secret)
+        return secret
+      else:
+        return False
+  @classmethod
   def create(cls, email, password, title, user = None):
     site = cls()
     site.admin = email
@@ -421,7 +433,7 @@ class User(WsModel):
 
   @classmethod
   def create_user(cls, email, password, user = None):
-    site_secret = Site.all().get().secret
+    site_secret = Site.secret()
     random_key = str(random())
     new_user = cls()
     new_user.email = email
@@ -430,6 +442,18 @@ class User(WsModel):
     new_user.salt = random_key
     new_user.put()
     return new_user
+  
+  def set_password(self, password):
+    """ set_password is a instance method to set the password for a user. If there is no salt currently set it will be generated randomly. """
+    site_secret = Site.secret()
+    if not self.salt:
+      self.salt = str(random())
+    if password:
+      self.password = sha256("%s%s%s" % (site_secret, self.salt, password)).hexdigest()
+      self.put()
+      return True
+    else:
+      return False
 
 class ThemePackage(WsModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
@@ -654,3 +678,10 @@ class Image(WsModel):
     site.images.append(img.key())
     site.put()
     return img
+class VerificationToken(WsModel):
+  """ Verification token to allow users to reset password """
+  user = db.ReferenceProperty(User)
+  code = db.StringProperty()
+  @classmethod
+  def create_token(cls, user_email):
+    
