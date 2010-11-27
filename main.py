@@ -644,6 +644,53 @@ class EmailContent(Handler):
     # TODO: send out emails to all email addresses in selected user listing
     # TODO: capture any failure events and report them
 
+class UserRecovery(Handler):
+  def get(self, code = False):
+    if not code:
+      code = self.request.get("code")
+    args = {}
+    if code:
+      token = VerificationToken.get_by_code(code)
+      if token:
+        email = token.email
+        if not email:
+          self.error(403)
+          return False
+        args = {
+          "code": code,
+          "email": email,
+        }
+    self.response.out.write(template.render('templates/pwrecovery.html',args))
+  def post(self, *args, **kwargs):
+    email = self.request.get("email")
+    code = self.request.get("code")
+    password = self.request.get("password")
+    if email and not code:
+      if User.send_recovery_email(email):
+        self.response.out.write("The email has been sent. Please check your email to reset your password.")
+        return True
+      else:
+        self.response.out.write("The email was not sent. Please try again.")
+        return False
+    elif email and code and password:
+      user = User.get_by_email(email)
+      if user:
+        if user.set_password(password):
+          site = Site.all().get()
+          login = User.login(email, password, site)
+          self.session["user"] = login
+          user.destroy_token()
+          self.redirect('/')
+          return True
+        else:
+          self.response.out.write("An Error Occurred Resetting Password, Please try again.")
+          return False
+      else:
+        self.response.out.write("Cannot Reset Password For This User")
+        return False
+    return False
+    
+
 class ListJavascript(Handler):
   def get(self, type):
     if type == "images":
@@ -661,6 +708,7 @@ ROUTES = [('/admin', Administrate),
                     ('/logout', Logout),
                     ('/install', Install),
                     ('/images/.*/[sbtl]', ImageHandler),
+                    ('/pwrecovery/(.*)', UserRecovery),
                     ('/(.*)css', CssHandler),
                     ('/.*', GetPage),]
 

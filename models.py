@@ -8,6 +8,7 @@ from appengine_utilities import event
 from appengine_utilities import cache
 from appengine_utilities.rotmodel import ROTModel
 from google.appengine.ext import db
+from google.appengine.api import mail
 from django.utils import simplejson
 from hashlib import sha256
 from random import random
@@ -85,6 +86,8 @@ class WsModel(ROTModel):
                 else:
                   setattr(model_to[0], model._relfields[0]["field"], model)
                 model_to[0].put()
+      if(cls.__name__ == "Page"):
+        memcache.delete("site-pages")
       return model
     else:
       return None
@@ -122,6 +125,9 @@ class WsModel(ROTModel):
               else:
                 setattr(model_to, model._relfields[0]["field"], model)
               model_to.put()
+    
+    if(cls.__name__ == "Page"):
+      memcache.delete("site-pages")
     return model
 
   @classmethod
@@ -182,7 +188,6 @@ class WsModel(ROTModel):
                 html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "<option value='None'>-- None --</option>" + "".join(map(build_option, objects)))
               else:
                 html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, ["<option value='%s'>%s</option>" % (object.key(), object.key().id()) for object in objects])
-            elif field['list'] :
             else:
               html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "".join(["<option value='%s'>%s</option>" % (x, x) for x in value.split(",")]))
         elif type == "checkbox":
@@ -221,7 +226,8 @@ def string_to_tags(site, tags):
 
 class Site(WsModel):
   """ Site is a wrapper class for all the site data."""
-  _modfields = [{"name":"admin","type":"email"},
+  _modfields = [
+    {"name":"admin","type":"email"},
     {"name":"keywords","type":"textlist"},
     {"name":"description","type":"email"},
     {"name":"tags","type":"textlist"}
@@ -238,7 +244,7 @@ class Site(WsModel):
   images = db.ListProperty(db.Key)
   theme_packages = db.ListProperty(db.Key)
   @classmethod
-  def secret(cls):
+  def get_secret(cls):
     secret = memcache.get("site_secret")
     if secret:
       return secret
@@ -247,6 +253,18 @@ class Site(WsModel):
       if secret:
         memcache.set("site_secret", secret)
         return secret
+      else:
+        return False
+  @classmethod
+  def get_title(cls):
+    title = memcache.get("site_title")
+    if title:
+      return title
+    else:
+      title = cls.all().get().title
+      if title:
+        memcache.set("site_title", title)
+        return title
       else:
         return False
   @classmethod
@@ -423,9 +441,21 @@ class User(WsModel):
   url = db.LinkProperty()
   picture = db.BlobProperty()
   tags = db.StringListProperty()
+
+  @classmethod
+  def get_by_email(cls, email):
+    """Returns the user with the passed in email address."""
+    user = cls.all().filter("email",email).get()
+    if user:
+      return user
+    else:
+      return False
+      
   @classmethod
   def login(cls, email, password, site):
     user = cls.all().filter("email",email).get()
+    if not user:
+      return False
     random_key = user.salt
     site_secret = site.secret
     result = False if sha256("%s%s%s" % (site_secret, random_key, password)).hexdigest() != user.password else user.key()
@@ -433,7 +463,7 @@ class User(WsModel):
 
   @classmethod
   def create_user(cls, email, password, user = None):
-    site_secret = Site.secret()
+    site_secret = Site.get_secret()
     random_key = str(random())
     new_user = cls()
     new_user.email = email
@@ -443,9 +473,47 @@ class User(WsModel):
     new_user.put()
     return new_user
   
+  @classmethod
+  def send_recovery_email(cls, user_email):
+    link = cls.generate_recovery_link(user_email)
+    user = User.get_by_email(user_email)
+    if not link:
+      return False
+    if not user:
+      return False
+    mail.send_mail(sender="IAOS.net website <info@iaos.net>",
+      to = "%s %s <%s>" % (user.firstname, user.lastname, user.email),
+      subject = "%s : User Password Reset" % Site.get_title(),
+      body = """Dear %s %s,
+      
+      Please click the following link to reset your password:
+%s
+If you did not request the reset of this password you can safely ignore this message. 
+If you do not have a password for this website but you are a member of the Irish 
+American Orthopaedic Society then please come to the website and set your password.
+
+Regards,
+IAOS.net""" % (user.firstname, user.lastname, link))
+    return True
+  
+  @classmethod
+  def generate_recovery_link(cls, user_email):
+    code = VerificationToken.create_token(user_email)
+    if code:
+      return "<a href='http://www.iaos.net/pwrecovery/%s'>Click Here to Reset Your Password</a>"%code
+    return False
+  
+  def destroy_token(self):
+    token = VerificationToken.get_by_user(self)
+    if token:
+      token.delete()
+      return True
+    else:
+      return False
+  
   def set_password(self, password):
     """ set_password is a instance method to set the password for a user. If there is no salt currently set it will be generated randomly. """
-    site_secret = Site.secret()
+    site_secret = Site.get_secret()
     if not self.salt:
       self.salt = str(random())
     if password:
@@ -495,7 +563,6 @@ class Page(WsModel):
     {"name":"tags","type":"textlist"},
     {"name":"keywords","type":"textlist"},
     {"name":"description","type":"textarea"},
-    {"name":"order","type":"select","list":},
   ]
   name = db.StringProperty()
   ancestor = db.SelfReferenceProperty()
@@ -684,4 +751,39 @@ class VerificationToken(WsModel):
   code = db.StringProperty()
   @classmethod
   def create_token(cls, user_email):
-    
+    user = User.get_by_email(user_email)
+    if user:
+      token = cls.all().filter('user',user).get()
+      if token:
+        return token.code
+      token = cls()
+      code = sha256("%s%s"%(user_email, datetime.datetime.now().isoformat("-"))).hexdigest()
+      if code:
+        token.user = user
+        token.code = code
+        token.put()
+        return code
+      else:
+        return False
+    else:
+      return False
+
+  @classmethod
+  def get_by_code(cls, code):
+    if code[0] == '/':
+      code = code[1:]
+    token = cls.all().filter('code', code).get()
+    if token:
+      return token.user
+    return False
+
+  @classmethod
+  def get_by_user(cls, user):
+    if user:
+      token = cls.all().filter('user',user).get()
+      if token:
+        return token
+      else:
+        return False
+    else:
+      return False
