@@ -34,6 +34,10 @@ class Webspinner():
     self.handler = handler
 
   def get_nav_list(self):
+    user_role = self.ws.users.get_current_user(self).roles()
+    html_out = memcache.get("menu_" + user_role[0].name )
+    if html_out:
+      return html_out
     html_out = "<ul class='site_menu'>"
     pages = memcache.get('site-pages')
     if not pages :
@@ -310,6 +314,14 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
               </div>
             </div>
           </span>""" % (self.request.path, self.ws.site.images_for_use()))
+          contents = Content.all().fetch(1000)
+          roles = Role.all().fetch(1000)
+          admin_html.append("""<span class="admin_tab">Email Blast
+            <div class="admin email">
+              %s
+            </div>
+          </span>
+          """ % (template.render('templates/email.html',{"contents":contents, "roles":roles})))
           # css for admin items
           admin_html.append("""<style>div.admin {display: none; position: absolute; height: 480px; width: 640px; background: #333; left: 300px; top: 20px; border: solid 3px #fff; -webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);}
           div.admin textarea{width: 630px; height: 120px;margin: 5px; z-index: 10000; background: #111; color: #1f1;}
@@ -346,6 +358,10 @@ $(function(){
               $("div.content_edit>div.data>a").ajax_edit({
                 result:"div.content_edit>div.look",
                 callback: function(){$("div.content_edit>div.tab_strip>span.look_tab").trigger("click");}
+              });
+              $("div.user_edit>div.look>a").ajax_edit({
+                result:"div.user_edit>div.data",
+                callback: function(){$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");}
               });
               $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
 })
@@ -441,7 +457,7 @@ $.plugin.addFunction('show_panel', webspinner.admin.show_panel);
         user_label = "Login"
       page_theme = page.theme
       #print page.build_template()
-      page_html = "<html><head><title>%s</title><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>{{ admin_content }}</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js)
+      page_html = "<html><head><title>%s</title><meta http-equiv='X-UA-Compatible' content='chrome=1'><style>%s</style></head><body>%s<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js' type='text/javascript'></script><script type='text/javascript'>%s</script>{{ admin_content }}</body></html>" % (page.title, page_theme.css, page.build_template(), page_theme.js)
       page_template = template.Template(page_html)
       sections = db.get(page.sections)
       section_dict = {}
@@ -632,15 +648,20 @@ class ExportItem(Handler):
 
 class EmailContent(Handler):
   @admin
-  def get(self, *args):
-    # TODO: get a template together for listing the content articles that you may wish to send.
-    # TODO: Get roles and content for listing in the template
-
-    self.response.out.write(template.render('templates/email.html', {"args" : args}))
-  @admin
   def post(self, *args):
+    from google.appengine.api import mail
+
     # TODO: get a template together for email content and inject safe content into it.
-    self.response.out.write(self.request)
+    content = db.get(self.request.get('content'))
+    role = db.get(self.request.get('role'))
+    mailusers = db.get(role.users)
+    for mailuser in mailusers:
+      mail.send_mail(sender = "IAOS Website <admin@iaos.net>",
+        to="%s %s <%s>" % (mailuser.firstname, mailuser.lastname, mailuser.email),
+        subject="%s" % content.title,
+        body="%s" % content.content)
+
+    self.response.out.write("""Emails sent successfully.""")
     # TODO: send out emails to all email addresses in selected user listing
     # TODO: capture any failure events and report them
 

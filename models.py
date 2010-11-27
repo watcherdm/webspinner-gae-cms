@@ -375,9 +375,15 @@ class Role(WsModel):
       new_role.name = role
       new_role.put()
       roles.append(new_role)
+    memcache.set('roles', roles)
     return roles
+  def add_user(self, user_key):
+    self.users.append(user_key);
+    self.put()
+    memcache.set('role_' + self.name + '_users', self.users)
   @classmethod
   def add_administrator(cls, user):
+    adminrole = memcache.get('roles').filter(lambda x : x.name == "Administrator")
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
     adminrole.put()
@@ -522,6 +528,13 @@ IAOS.net""" % (user.firstname, user.lastname, link))
       return True
     else:
       return False
+  def roles(self):
+    roles = memcache.get('roles')
+    if not roles:
+      roles = Role.all().fetch(1000)
+      memcache.set('roles', roles)
+    this_user_roles = roles.filter(lambda x : x.users == self.key())
+    return this_user_roles
 
 class ThemePackage(WsModel):
   """ ThemePackage groups theme elements together for packaging and distribusion"""
