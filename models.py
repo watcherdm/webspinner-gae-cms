@@ -1,7 +1,7 @@
 #!/usr/env python
 
 """Models module for Webspinner GAE CMS"""
-
+import logging
 from appengine_utilities import sessions
 from appengine_utilities import flash
 from appengine_utilities import event
@@ -88,6 +88,10 @@ class WsModel(ROTModel):
                 model_to[0].put()
       if(cls.__name__ == "Page"):
         memcache.delete("site-pages")
+        memcache.delete("menu_Administrator")
+        memcache.delete("menu_Anonymous")
+        memcache.delete("menu_User")
+      memcache.delete("%s_all" % cls.__name__.lower())
       return model
     else:
       return None
@@ -128,12 +132,31 @@ class WsModel(ROTModel):
     
     if(cls.__name__ == "Page"):
       memcache.delete("site-pages")
+    memcache.delete("%s_all" % cls.__name__.lower())
     return model
 
   @classmethod
-  def to_edit_list(cls, display_field_name = "name", return_url = "/"):
-    models = cls.all().fetch(1000)
-    html_out = "<br />".join(["<a href='/admin/edit/%s/%s?return_url=%s'>%s</a>" % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) for model in models])
+  def to_edit_list(cls, display_field_name = "name", return_url = "/", include_security=False):
+    html_out = ''
+    models = memcache.get("%s_all" % cls.__name__.lower())
+    if not models:
+      models = cls.all().fetch(1000)
+      memcache.set("%s_all" % cls.__name__.lower(), models)
+    for model in models:
+      link_html = "<a href='/admin/edit/%s/%s?return_url=%s' style='float:left;'>%s</a>"
+      if include_security:
+        security_form = "<form action='/admin/set_user_role' method='POST' style='float: right;'><select name='role' style='width: 150px;'>"
+        roles = memcache.get("roles")
+        if not roles:
+          roles = Role.all().fetch(1000)
+          memcache.set("roles",roles)
+        for role in roles:
+          security_form += "<option value='%s' %s>%s</option>" % (role.key(), 'selected' if [x == model for x in db.get(role.users)] else '' ,role.name)
+        security_form += "</select><input type='hidden' name='user' value='%s'/><input type='hidden' name='return_url' value='%s'/><input type='submit' style='width: 150px;' value='Save'/></form>"
+        link_html += security_form
+      else:
+        link_html += "<input type='hidden' value='%s' name='model_id' rel='%s'/>"
+      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name), model.key(), return_url) + "<br />"
     return html_out
 
   @classmethod
@@ -528,12 +551,14 @@ IAOS.net""" % (user.firstname, user.lastname, link))
       return True
     else:
       return False
+      
   def roles(self):
     roles = memcache.get('roles')
     if not roles:
       roles = Role.all().fetch(1000)
       memcache.set('roles', roles)
-    this_user_roles = roles.filter(lambda x : x.users == self.key())
+    this_user_roles = filter(lambda x : [y == self for y in db.get(x.users)] , roles)
+    logging.info(this_user_roles)
     return this_user_roles
 
 class ThemePackage(WsModel):

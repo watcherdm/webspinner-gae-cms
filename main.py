@@ -9,6 +9,7 @@ Neither the name of the appengine-utilities project nor the names of its contrib
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 '''
+import logging
 import os
 import __main__
 import time
@@ -30,19 +31,28 @@ from models import *
 
 class Webspinner():
   def __init__(self, handler):
-    self.site = Site.all().get()
+    site = memcache.get("site")
+    if site:
+      self.site = site
+    else:
+      memcache.set("site", Site.all().get())
+      self.site = site
     self.handler = handler
 
   def get_nav_list(self):
-    user_role = self.ws.users.get_current_user(self).roles()
-    html_out = memcache.get("menu_" + user_role[0].name )
+    cuser = self.users.get_current_user(self.handler)
+    if cuser:
+      user_role = cuser.roles()
+      logging.info(user_role)
+    else:
+      user_role = "Anonymous"
+    html_out = memcache.get("menu_%s" % user_role )
     if html_out:
       return html_out
     html_out = "<ul class='site_menu'>"
     pages = memcache.get('site-pages')
     if not pages :
         pages = db.get(self.site.pages)
-        pages.sort()
         memcache.set('site-pages', pages)
     def top_level(page):
       if not page.ancestor:
@@ -64,6 +74,7 @@ class Webspinner():
       if self.handler.permission_check(page):
         html_out = add_page_to_menu(page, html_out)
     html_out += "</ul>"
+    memcache.set("menu_%s" % user_role, html_out)
     return html_out
 
   class users:
@@ -290,7 +301,7 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
             <div class="secure">
               %s
             </div>
-          </div></span>""" % (User.to_form(self.request.path), user.to_edit_list("email", self.request.path), user.to_form(self.request.path, "edit", user.key() )))
+          </div></span>""" % (User.to_form(self.request.path), User.to_edit_list("email", self.request.path, True), user.to_form(self.request.path, "edit", user.key() )))
           # image manager for the site
           admin_html.append("""<span class="admin_tab">Images
             <div class="admin image.add">
@@ -718,11 +729,35 @@ class ListJavascript(Handler):
       self.response.headers.add_header("Content-Type","text/javascript")
       self.response.out.write("var tinyMCEImageList = [%s]" % "".join(["['" + image.title + "','" + image.to_url() +"']" for image in db.get(self.ws.site.images)]))
 
+class SetUserRole(Handler):
+  @admin
+  def post(self):
+    user = self.request.get('user')
+    new_role = self.request.get('role')
+    return_url = self.request.get('return_url')
+    if not user or not new_role or not return_url:
+      self.redirect('/')
+      return False
+    roles = memcache.get('roles')
+    if not roles:
+      roles = Role.all().fetch(1000)
+      memcache.set('roles', roles)
+    for role in roles:
+      if role.key() == new_role:
+        role.users = set(list(role.users.append(user)))
+        role.put()
+      elif user in role.users:
+        role.users.remove(user)
+        role.put()
+    memcache.delete("roles")
+    self.redirect(return_url)
+
 ROUTES = [('/admin', Administrate),
                     ('/admin/add/(.+)', AddItem),
                     ('/admin/edit/(.+)', EditItem),
                     ('/admin/delete/(.+)', DeleteItem),
                     ('/admin/download/(.+)', ExportItem),
+                    ('/admin/set_user_role', SetUserRole),
                     ('/admin/lists/(.+)', ListJavascript),
                     ('/admin/email(.*)', EmailContent),
                     ('/login', Login),
