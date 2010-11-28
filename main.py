@@ -301,7 +301,7 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
             <div class="secure">
               %s
             </div>
-          </div></span>""" % (User.to_form(self.request.path), User.to_edit_list("email", self.request.path, True), user.to_form(self.request.path, "edit", user.key() )))
+          </div></span>""" % (User.to_form(self.request.path), User.to_edit_list("email", self.request.path, True), User.to_form(self.request.path, "edit", user.key() )))
           # image manager for the site
           admin_html.append("""<span class="admin_tab">Images
             <div class="admin image.add">
@@ -640,6 +640,30 @@ class EditItem(Handler):
       else:
         self.response.out.write(self.request.get("return_url"))
 
+class SetUserRoles(Handler):
+  @admin
+  def get(self, args):
+    args = args.split('/')
+    key = args[0].split('?')[0]
+    return_url = self.request.get('return_url')
+    duser = db.get(key)
+    self.response.out.write(duser.create_roles_form(return_url))
+  @admin
+  def post(self, args):
+    user = self.request.get('user')
+    role = self.request.get('role')
+    return_url = self.request.get('return_url')
+    if not user or not role:
+      self.redirect(return_url)
+    duser = db.get(user)
+    drole = db.get(role)
+    urole = duser.roles()
+    for ur in urole:
+      ur.users.remove(duser.key())
+      ur.put()
+    drole.users.append(duser.key())
+    drole.put()
+    self.redirect(return_url)
 
 class DeleteItem(Handler):
   @admin
@@ -729,35 +753,12 @@ class ListJavascript(Handler):
       self.response.headers.add_header("Content-Type","text/javascript")
       self.response.out.write("var tinyMCEImageList = [%s]" % "".join(["['" + image.title + "','" + image.to_url() +"']" for image in db.get(self.ws.site.images)]))
 
-class SetUserRole(Handler):
-  @admin
-  def post(self):
-    user = self.request.get('user')
-    new_role = self.request.get('role')
-    return_url = self.request.get('return_url')
-    if not user or not new_role or not return_url:
-      self.redirect('/')
-      return False
-    roles = memcache.get('roles')
-    if not roles:
-      roles = Role.all().fetch(1000)
-      memcache.set('roles', roles)
-    for role in roles:
-      if role.key() == new_role:
-        role.users = set(list(role.users.append(user)))
-        role.put()
-      elif user in role.users:
-        role.users.remove(user)
-        role.put()
-    memcache.delete("roles")
-    self.redirect(return_url)
-
 ROUTES = [('/admin', Administrate),
                     ('/admin/add/(.+)', AddItem),
                     ('/admin/edit/(.+)', EditItem),
                     ('/admin/delete/(.+)', DeleteItem),
                     ('/admin/download/(.+)', ExportItem),
-                    ('/admin/set_user_role', SetUserRole),
+                    ('/admin/set_user_roles/(.*)', SetUserRoles),
                     ('/admin/lists/(.+)', ListJavascript),
                     ('/admin/email(.*)', EmailContent),
                     ('/login', Login),

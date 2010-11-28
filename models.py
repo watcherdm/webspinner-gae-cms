@@ -143,20 +143,10 @@ class WsModel(ROTModel):
       models = cls.all().fetch(1000)
       memcache.set("%s_all" % cls.__name__.lower(), models)
     for model in models:
-      link_html = "<a href='/admin/edit/%s/%s?return_url=%s' style='float:left;'>%s</a>"
+      link_html = "<a href='/admin/edit/%s/%s?return_url=%s'>%s</a> "
       if include_security:
-        security_form = "<form action='/admin/set_user_role' method='POST' style='float: right;'><select name='role' style='width: 150px;'>"
-        roles = memcache.get("roles")
-        if not roles:
-          roles = Role.all().fetch(1000)
-          memcache.set("roles",roles)
-        for role in roles:
-          security_form += "<option value='%s' %s>%s</option>" % (role.key(), 'selected' if [x == model for x in db.get(role.users)] else '' ,role.name)
-        security_form += "</select><input type='hidden' name='user' value='%s'/><input type='hidden' name='return_url' value='%s'/><input type='submit' style='width: 150px;' value='Save'/></form>"
-        link_html += security_form
-      else:
-        link_html += "<input type='hidden' value='%s' name='model_id' rel='%s'/>"
-      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name), model.key(), return_url) + "<br />"
+        link_html += " <a href='/admin/set_user_roles/%s?return_url=%s'>Modify Roles</a>" % (model.key(), return_url)
+      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) + "<br />"
     return html_out
 
   @classmethod
@@ -479,7 +469,7 @@ class User(WsModel):
       return user
     else:
       return False
-      
+
   @classmethod
   def login(cls, email, password, site):
     user = cls.all().filter("email",email).get()
@@ -501,7 +491,7 @@ class User(WsModel):
     new_user.salt = random_key
     new_user.put()
     return new_user
-  
+
   @classmethod
   def send_recovery_email(cls, user_email):
     link = cls.generate_recovery_link(user_email)
@@ -552,13 +542,27 @@ IAOS.net""" % (user.firstname, user.lastname, link))
     else:
       return False
       
-  def roles(self):
-    roles = memcache.get('roles')
+  def create_roles_form(self, return_url):
+    roles = memcache.get("roles")
     if not roles:
       roles = Role.all().fetch(1000)
-      memcache.set('roles', roles)
-    this_user_roles = filter(lambda x : [y == self for y in db.get(x.users)] , roles)
-    logging.info(this_user_roles)
+      memcache.set("roles", roles)
+    role_out = "<select name='role'>"
+    for role in roles:
+      user_role = self.roles()[0].name if self.roles() else "Anonymous"
+      selected = "selected" if role.name == user_role else ""
+      role_out += "<option value='%s' %s>%s</option>" % (role.key(), selected ,role.name)
+    role_out += "</select>"
+    html_out = """<form action='/admin/set_user_roles/' method='POST'>%s 
+      <input type="hidden" name="user" value="%s"/>
+      <input type="hidden" name="return_url" value="%s"/>
+      %s
+      <input type="submit" value="Set Role"/>
+    </form>""" % (self.email, self.key(), return_url, role_out)
+    return html_out
+
+  def roles(self):
+    this_user_roles = Role.all().filter("users =", self.key()).fetch(1000)
     return this_user_roles
 
 class ThemePackage(WsModel):
