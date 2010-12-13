@@ -110,7 +110,7 @@ class Handler(webapp.RequestHandler):
     self.ws = Webspinner(self)
     self.session = sessions.Session()
     self.actions = []
-
+    
   def json_out(self, data):
     self.response.headers.add_header("Content-Type","application/json")
     self.response.out.write(simplejson.dumps(data))
@@ -349,6 +349,7 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           div.admin div.look {display: none;height: 480px; overflow: auto;}
           div.admin div.secure {display: none;height: 480px; overflow: auto;}
           div.secure table{color: white; width: 100%;}
+          div.contained {background: #fff; color: #111; border-radius: 10px; padding:10px; margin: 10px; font-weight: normal;}
           </style>""")
           # javascript for admin items
           admin_html.append("""<script type="text/javascript">

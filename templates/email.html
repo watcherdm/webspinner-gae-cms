@@ -1,0 +1,16 @@
+<div>
+	<form method="post" action="/emailblast">
+		{% for content in contents %}
+		<input type="checkbox" name="content" value="{{ content.key }}"/>
+		<div class="contained">
+			{{ content.content }}
+		</div>
+		{% endfor %}
+		<select name="role">
+			{% for role in roles %}
+			<option value="{{ role.key }}">{{ role.name }}</option>
+			{% endfor %}
+		</select>
+		<input type="submit" value="Send Content as Email"/>
+	</form>
+</div>

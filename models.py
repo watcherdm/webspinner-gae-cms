@@ -132,6 +132,9 @@ class WsModel(ROTModel):
     
     if(cls.__name__ == "Page"):
       memcache.delete("site-pages")
+      memcache.delete("menu_Administrator")
+      memcache.delete("menu_Anonymous")
+      memcache.delete("menu_User")
     memcache.delete("%s_all" % cls.__name__.lower())
     return model
 
