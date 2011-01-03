@@ -1,5 +1,5 @@
 <div>
-	<form method="post" action="/emailblast">
+	<form method="post" action="/admin/email">
 		{% for content in contents %}
 		<input type="checkbox" name="content" value="{{ content.key }}"/>
 		<div class="contained">

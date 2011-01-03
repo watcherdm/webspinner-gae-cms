@@ -1,5 +1,5 @@
 application: iaos-web
-version: 1-0
+version: 1-1
 runtime: python
 api_version: 1
 
@@ -24,6 +24,10 @@ handlers:
 
 - url: /gaeutilities/.*
   script: appengine_utilities/interface/main.py
+  login: admin
+
+- url: /_ah/queue/deferred
+  script: $PYTHON_LIB/google/appengine/ext/deferred/deferred.py
   login: admin
 
 - url: /yui/.*

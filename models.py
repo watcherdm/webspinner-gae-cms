@@ -72,7 +72,7 @@ class WsModel(ROTModel):
             setattr(model, key, dict_values[key])
       model.put()
       if len(model._relfields) > 0:
-        name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+        name = "edit_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
         if name in dict_values:
           if model._relfields[0]["model"] in globals():
             model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
@@ -115,7 +115,7 @@ class WsModel(ROTModel):
         setattr(model, key, dict_values[key])
     model.put()
     if len(model._relfields) > 0:
-      name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+      name = "add_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
       if name in dict_values:
         if model._relfields[0]["model"] in globals():
           model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
@@ -162,13 +162,13 @@ class WsModel(ROTModel):
       model = cls()
       html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
     if rel_key and len(model._relfields) > 0:
-      name = model._relfields[0]["model"].lower() + "." + model._relfields[0]["value"].lower()
+      name = mode + '_' + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
       html_out += "<input type='hidden' value='%s' name='%s' id='%s' />" % (rel_key, name, name)
     for field in model._modfields:
       key = field["name"]
       type = field["type"]
       if key in model.properties():
-        finame = cls.__name__.lower() + "." + key
+        finame = mode + '_' + cls.__name__.lower() + "-" + key
         html_out += "<label for'%s'>%s</label>" % (finame, cls.__name__ + " " + key.capitalize() + ":")
         textfields = ["text","email","password","url","tel"]
         value = getattr(model, key)
@@ -515,6 +515,14 @@ If you do not have a password for this website but you are a member of the Irish
 American Orthopaedic Society then please come to the website and set your password.
 
 Regards,
+IAOS.net""" % (user.firstname, user.lastname, link),
+      html = """<h3>Dear %s %s,</h3>
+<p><a href="%s">Please click here to reset your password.</a> </p>
+<p>If you did not request the reset of this password you can safely ignore this message. 
+If you do not have a password for this website but you are a member of the Irish 
+American Orthopaedic Society then please come to the website and set your password.</p>
+</p>
+Regards,<br/>
 IAOS.net""" % (user.firstname, user.lastname, link))
     return True
   
@@ -522,7 +530,7 @@ IAOS.net""" % (user.firstname, user.lastname, link))
   def generate_recovery_link(cls, user_email):
     code = VerificationToken.create_token(user_email)
     if code:
-      return "<a href='http://www.iaos.net/pwrecovery/%s'>Click Here to Reset Your Password</a>"%code
+      return "http://www.iaos.net/pwrecovery/%s"%code
     return False
   
   def destroy_token(self):

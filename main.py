@@ -23,7 +23,7 @@ from appengine_utilities.rotmodel import ROTModel
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.api import memcache, users
-from google.appengine.ext import db
+from google.appengine.ext import db, deferred
 from django.utils import simplejson
 import hashlib
 import re
@@ -328,7 +328,7 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           contents = Content.all().fetch(1000)
           roles = Role.all().fetch(1000)
           admin_html.append("""<span class="admin_tab">Email Blast
-            <div class="admin email">
+            <div class="admin email look">
               %s
             </div>
           </span>
@@ -376,6 +376,17 @@ $(function(){
                 callback: function(){$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");}
               });
               $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
+              $("textarea.tinymce").each(function(){
+                var $ta = $(this);
+                $ta.parent("form").bind("submit", 
+                  function(){ 
+                    console.log($ta.html());
+                    console.log($ta.tinymce().getContent());
+                    $ta.val($ta.tinymce().getContent()); 
+                    return true;
+                  }
+                );
+              });
 })
 $.plugin = {
   addFunction : function(name, object){
@@ -583,12 +594,12 @@ class AddItem(Handler):
         values = {}
         for k in self.request.arguments():
           value = self.request.get_all(k)
-          if k.split(".")[-1] == "permissions":
-            values[k.split('.')[-1]] = ",".join(self.request.get_all("page.permissions"))
-          if k.split('.')[-1] in cls().properties() and "List" in cls().properties()[k.split('.')[-1]].__class__().__str__():
-            values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value]
+          if k.split('-')[-1] == "permissions":
+            values[k.split('-')[-1]] = ",".join(self.request.get_all("page.permissions"))
+          if k.split('-')[-1] in cls().properties() and "List" in cls().properties()[k.split('-')[-1]].__class__().__str__():
+            values[k.split('-')[-1]] = [x.lstrip().rstrip() for x in value]
           else:
-            values[k.split('.')[-1]] = value
+            values[k.split('-')[-1]] = value
           values[k] = self.request.get(k)
         result = cls.create(values)
         if result:
@@ -622,15 +633,17 @@ class EditItem(Handler):
         values["key"] = key
 
         for k in self.request.arguments():
+          logging.info(k)
           value = self.request.get_all(k)
-          if k.split('.')[-1] in cls().properties().keys():
-            if ".ListProperty" in cls().properties()[k.split('.')[-1]].__class__.__str__(""):
-              if k.split(".")[-1] == "permissions":
-                values[k.split('.')[-1]] = self.request.get_all(k)
+          logging.info(value)
+          if k.split('-')[-1] in cls().properties().keys():
+            if ".ListProperty" in cls().properties()[k.split('-')[-1]].__class__.__str__(""):
+              if k.split("-")[-1] == "permissions":
+                values[k.split('-')[-1]] = self.request.get_all(k)
               else:
-                values[k.split('.')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
+                values[k.split('-')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
             else:
-              values[k.split('.')[-1]] = value
+              values[k.split('-')[-1]] = value
           values[k] = self.request.get_all(k)
         result = cls.update(values)
         if result:
@@ -686,20 +699,21 @@ class EmailContent(Handler):
   @admin
   def post(self, *args):
     from google.appengine.api import mail
-
+    import html2text
     # TODO: get a template together for email content and inject safe content into it.
     content = db.get(self.request.get('content'))
     role = db.get(self.request.get('role'))
     mailusers = db.get(role.users)
     for mailuser in mailusers:
-      mail.send_mail(sender = "IAOS Website <admin@iaos.net>",
+      deferred.defer(mail.send_mail, sender = "IAOS Website <info@iaos.net>",
         to="%s %s <%s>" % (mailuser.firstname, mailuser.lastname, mailuser.email),
         subject="%s" % content.title,
-        body="%s" % content.content)
-
-    self.response.out.write("""Emails sent successfully.""")
-    # TODO: send out emails to all email addresses in selected user listing
-    # TODO: capture any failure events and report them
+        html="%s" % content.content,
+        body="%s" % html2text.html2text(content.content, baseurl="http://www.iaos.net/"))
+    self.response.out.write("""BODY : %s
+    HTML : %s
+    SUBJECT : %s""" % ())
+    self.response.out.write("""Emails scheduled successfully.""")
 
 class UserRecovery(Handler):
   def get(self, code = False):
