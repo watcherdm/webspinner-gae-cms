@@ -216,6 +216,7 @@ div.nav>a:link{display: block; float: right; padding: 9px 15px;text-decoration: 
 div.nav>a:active{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
 div.nav>a:hover{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
 div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoration: none; color: #f0f0f0; font-weight: bolder; text-shadow: 0px 1px 1px rgba(0,0,0,.6);}
+ul.image_selector{list-style: none; }
     """],"js":[""]})
         page.put()
       if not page.sections:
@@ -253,10 +254,10 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           for section in db.get(page.sections):
             admin_html.append("""<span class="admin_tab">%s<div class="admin section_theme_html">
               <form action="/admin/edit/theme/%s?return_url=%s" method="POST">
-                <textarea name="section.theme.html" id="section.theme.html">%s</textarea>
-                <textarea name="section.theme.css" id="section.theme.css">%s</textarea>
-                <textarea name="section.theme.js" id="section.theme.js">%s</textarea>
-                <input type="submit" name="section.theme.submit" value="Save Changes"/>
+                <textarea name="section-theme-html" id="section-theme-html">%s</textarea>
+                <textarea name="section-theme-css" id="section-theme-css">%s</textarea>
+                <textarea name="section-theme-js" id="section-theme-js">%s</textarea>
+                <input type="submit" name="section-theme-submit" value="Save Changes"/>
               </form>
             </div></span>""" % (section.name.replace("section_","").capitalize(),section.theme.key(),self.request.path,  section.theme.html, section.theme.css, section.theme.js))
             s += 1
@@ -304,20 +305,20 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           </div></span>""" % (User.to_form(self.request.path), User.to_edit_list("email", self.request.path, True), User.to_form(self.request.path, "edit", user.key() )))
           # image manager for the site
           admin_html.append("""<span class="admin_tab">Images
-            <div class="admin image.add">
+            <div class="admin image-add">
               <div class="tab_strip">
                 <span class="data_tab">Add Image</span>
                 <span class="look_tab">Use Image</span>
               </div>
               <div class="data">
       <form action="/admin/add/image?return_url=%s" enctype="form/multipart" method="POST">
-        <label for="image.file">Image File: <span class='help'>the image file to store and display.</span></label><br/>
-        <input type="file" name="image.file" id="image.file" required /><br/>
-        <label for="image.title">Image Title: <span class='help'>the title that will be used when referring to the image in themes.</span></label><br />
-        <input type="text" name="image.title" id="image.title" /><br/>
-        <label for="image.tags">Image Tags: <span class='help'>the tags associated with this image.</span></label><br/>
-        <input type="text" name="image.tags" id="image.tags" /><br/>
-        <input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
+        <label for="add_image-file">Image File: <span class='help'>the image file to store and display.</span></label><br/>
+        <input type="file" name="add_image-file" id="add_image-file" required /><br/>
+        <label for="image-title">Image Title: <span class='help'>the title that will be used when referring to the image in themes.</span></label><br />
+        <input type="text" name="add_image-title" id="add_image-title" /><br/>
+        <label for="add_image-tags">Image Tags: <span class='help'>the tags associated with this image.</span></label><br/>
+        <input type="text" name="add_image-tags" id="add_image-tags" /><br/>
+        <input type="submit" name="add_image-submit" id="add_image-submit" value="Upload Image"/>
       </form>
               </div>
               <div class="look">
@@ -328,7 +329,7 @@ div.nav>a:visited{display: block; float: right; padding: 9px 15px;text-decoratio
           contents = Content.all().fetch(1000)
           roles = Role.all().fetch(1000)
           admin_html.append("""<span class="admin_tab">Email Blast
-            <div class="admin email look">
+            <div class="admin email">
               %s
             </div>
           </span>
@@ -357,12 +358,12 @@ $(function(){
               $("div.admin_tools").find("span").toggle(function(){
                   $('div.admin').hide();
                   var $this = $(this).find(">div");
-                  $this.show('fast').css("top", 100 - $(this).offset().top + "px")
+                  $this.slideDown('fast').css("top", 100 - $(this).offset().top + "px").find(".look").show();
                   $('body').click(function(){;$this.hide();})
                 },
                 function(e){
                   if($(e.srcElement).hasClass("admin_tab")){
-                    $(this).find("div:not(.tab_strip, .data)").hide('fast').find(".data").show();
+                    $(this).find("div:not(.tab_strip, .data)").slideUp('fast').find(".data").show();
                   }
                 });
               $("div.admin_tools span div").click(function(e){e.stopPropagation(); return true;});
@@ -375,18 +376,7 @@ $(function(){
                 result:"div.user_edit>div.data",
                 callback: function(){$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");}
               });
-              $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
-              $("textarea.tinymce").each(function(){
-                var $ta = $(this);
-                $ta.parent("form").bind("submit", 
-                  function(){ 
-                    console.log($ta.html());
-                    console.log($ta.tinymce().getContent());
-                    $ta.val($ta.tinymce().getContent()); 
-                    return true;
-                  }
-                );
-              });
+              $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images", extended_valid_elements : "iframe[frameborder|scrolling|marginwidth|marginheight|src|width|height|name|align]", width: "100%", height : "300px"});
 })
 $.plugin = {
   addFunction : function(name, object){
@@ -712,7 +702,7 @@ class EmailContent(Handler):
         body="%s" % html2text.html2text(content.content, baseurl="http://www.iaos.net/"))
     self.response.out.write("""BODY : %s
     HTML : %s
-    SUBJECT : %s""" % ())
+    SUBJECT : %s<br />""" % (html2text.html2text(content.content, baseurl="http://www.iaos.net/"), content.content,content.title))
     self.response.out.write("""Emails scheduled successfully.""")
 
 class UserRecovery(Handler):
@@ -766,15 +756,23 @@ class ListJavascript(Handler):
   def get(self, type):
     if type == "images":
       self.response.headers.add_header("Content-Type","text/javascript")
-      self.response.out.write("var tinyMCEImageList = [%s]" % "".join(["['" + image.title + "','" + image.to_url() +"']" for image in db.get(self.ws.site.images)]))
+      self.response.out.write("var tinyMCEImageList = [%s]" % ",".join(["['" + image.title + "','" + image.to_url() +"']" for image in db.get(self.ws.site.images)]))
 
-ROUTES = [('/admin', Administrate),
-                    ('/admin/add/(.+)', AddItem),
+class InstallSite(Handler):
+  def post(self):
+    im = self.request.get('site.import')
+    if im:
+      site = simplejson.loads(im);
+      self.response.out.write(Site.inport( site ) )
+
+ROUTES = [          ('/admin/add/(.+)', AddItem),
                     ('/admin/edit/(.+)', EditItem),
                     ('/admin/delete/(.+)', DeleteItem),
                     ('/admin/download/(.+)', ExportItem),
+                    ('/admin/upload/site', InstallSite),
                     ('/admin/set_user_roles/(.*)', SetUserRoles),
                     ('/admin/lists/(.+)', ListJavascript),
+                    ('/admin', Administrate),
                     ('/admin/email(.*)', EmailContent),
                     ('/login', Login),
                     ('/logout', Logout),

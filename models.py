@@ -231,6 +231,66 @@ class WsModel(ROTModel):
   def get_newest(cls, keys = None):
     return cls.get_order_by_field(keys, "date_created", "DESC")
 
+  @classmethod
+  def clear(cls):
+    items = cls.all()
+    for item in items:
+      item.delete()
+  def check_fields(self, comp):    
+    keys = {"theme_packages" : ThemePackage, 
+            "images" : Image,
+            "pages" : Page,
+            "sections" : Section,
+            "contents" : Content,
+            "theme" : Theme,
+            "roles" : Role,
+            "permissions" : Permission,
+            "users" : User}
+    result = True
+    for prop in self.properties():
+      if not getattr(self, prop) == comp[prop]:
+        result = False
+    return result
+
+  @classmethod
+  def inport(cls, comp):
+#    for c in WsModel.__subclasses__():
+#      c.clear()
+    keys = {"theme_packages" : ThemePackage, 
+            "images" : Image,
+            "pages" : Page,
+            "sections" : Section,
+            "contents" : Content,
+            "theme" : Theme,
+            "roles" : Role,
+            "permissions" : Permission,
+            "users" : User}
+    omodel = cls()
+    for key in comp:
+      value = comp[ key ]
+      if not key in keys:
+        setattr(omodel, key, value)
+      else:
+        models = keys[key].all()
+        print value
+        if value.__class__ == list:
+          logging.log(1,'value is a list')
+          result = []
+          if not models:
+            for item in value:
+              j = keys[key].inport(item)
+              result.append(j.key())
+          else:
+            for item in value:
+              for model in models:
+                if model.check_fields(item):
+                  result.append(model.key())
+                else:
+                  j = keys[key].inport(item)
+                  result.append(j.key())
+          setattr(omodel, key, result)
+    omodel.put()
+    return omodel
 
 ACTIONS = ['view','edit']
 
@@ -357,6 +417,9 @@ if(!window.cms){
     site = cls.get(key)
     return to_dict(site)
 
+
+    
+        
   def build_permissions(self):
     perm_set = []
     for action in self.actions:
@@ -399,7 +462,7 @@ class Role(WsModel):
     memcache.set('role_' + self.name + '_users', self.users)
   @classmethod
   def add_administrator(cls, user):
-    adminrole = memcache.get('roles').filter(lambda x : x.name == "Administrator")
+    #adminrole = memcache.get('roles').filter(lambda x : x.name == "Administrator")
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
     adminrole.put()
@@ -788,15 +851,17 @@ class Image(WsModel):
     return cls.all().filter("name =", str(name)).fetch(1)[0]
   @classmethod
   def create(cls, dict_values):
+    logging.info(dict_values)
     img = cls()
-    img.file = "".join(dict_values["file"])
-    img.title = "".join(dict_values["title"])
+    img.file = "".join(dict_values["add_image-file"])
+    img.title = "".join(dict_values["add_image-title"])
     img.name = str(random()).split('.')[-1]
-    img.tags = [x.lstrip().rstrip() for x in "".join(dict_values['tags']).split(",")]
+    img.tags = [x.lstrip().rstrip() for x in "".join(dict_values['add_image-tags']).split(",")]
     img.put()
     site = Site.all().get()
     site.images.append(img.key())
     site.put()
+    memcache.delete("site")
     return img
 class VerificationToken(WsModel):
   """ Verification token to allow users to reset password """
@@ -832,11 +897,20 @@ class VerificationToken(WsModel):
 
   @classmethod
   def get_by_user(cls, user):
-    if user:
-      token = cls.all().filter('user',user).get()
-      if token:
-        return token
-      else:
-        return False
-    else:
-      return False
+    if not user:
+      return false
+    token = cls.all().filter('user',user).get()
+    if not token:
+      return false
+    return token
+
+
+class ThingDefitition():
+  name = db.StringProperty()
+  valuetype = db.StringProperty()
+  def create_thing_definition(self, name, type):
+    if not name:
+      return false
+    if not type:
+      return false
+    
