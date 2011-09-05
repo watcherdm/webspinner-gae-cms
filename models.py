@@ -259,6 +259,19 @@ class Site(WsModel):
   roles = db.ListProperty(db.Key)
   images = db.ListProperty(db.Key)
   theme_packages = db.ListProperty(db.Key)
+  def before_get(self):
+    pass
+  def after_get(self):
+    pages = Page.all().get()
+    if not self.pages == pages:
+      self.pages.clear()
+      for page in pages:
+        self.pages.append(page.key())
+      self.put()
+  def get(self, **kwargs):
+    self.before_get()
+    super(Site, self).get(**kwargs)
+    self.after_get()
   @classmethod
   def get_secret(cls):
     secret = memcache.get("site_secret")
@@ -399,7 +412,7 @@ class Role(WsModel):
     memcache.set('role_' + self.name + '_users', self.users)
   @classmethod
   def add_administrator(cls, user):
-    adminrole = memcache.get('roles').filter(lambda x : x.name == "Administrator")
+    adminrole = filter(lambda x : x.name == "Administrator", memcache.get('roles'))
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
     adminrole.put()
@@ -577,7 +590,7 @@ IAOS.net""" % (user.firstname, user.lastname, link))
     return this_user_roles
 
 class ThemePackage(WsModel):
-  """ ThemePackage groups theme elements together for packaging and distribusion"""
+  """ ThemePackage groups theme elements together for packaging and distribution"""
   _modfields = [{"name":"name","type":"text"},
     {"name":"themes","type":"selectmulti","list":"Theme","list_val":"key","list_name":"name"}]
   name = db.StringProperty()
@@ -629,30 +642,6 @@ class Page(WsModel):
   visible = db.BooleanProperty()
   tags = db.StringListProperty()
   page_chain = db.StringListProperty()
-  @classmethod
-  def old_create(cls, dict_values):
-    mainpage = Page.all().get()
-    page = cls()
-    page.name = dict_values['name']
-    if not dict_values['ancestor'] == "None"and not dict_values["ancestor"] == None:
-      anc = Page.get_by_id(long(dict_values['ancestor']))
-      page.ancestor = anc
-    else:
-      page.ancestor = None
-    page.title = dict_values['title']
-    page.menu_name = dict_values['menu_name']
-    if "visible" in dict_values:
-      page.visible = (dict_values['visible'] != "")
-    page.tags = dict_values['tags']
-    page.page_chain.append(dict_values["name"])
-    if mainpage:
-      page.theme = Theme.create({"name":page.name,"html":mainpage.theme.html, "css": mainpage.theme.css, "js": mainpage.theme.js})
-    page.put()
-    site = Site.all().get()
-    if site:
-      site.pages.append(page.key())
-      site.put()
-    return page
 
   @classmethod
   def get_by_name(cls, name):
@@ -798,6 +787,7 @@ class Image(WsModel):
     site.images.append(img.key())
     site.put()
     return img
+
 class VerificationToken(WsModel):
   """ Verification token to allow users to reset password """
   user = db.ReferenceProperty(User)
