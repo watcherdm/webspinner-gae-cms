@@ -17,14 +17,14 @@
 				</span>
 			</div>
 			<div class="data">
-				{{ page_data }}
+				{{ page_edit }}
 			</div>
 			<div class="look">
-				{{ page_looks }}
+				{{ theme_edit }}
 			</div>
 			<div class="secure">
-				<form action="/admin/edit/page/%s?return_url=%s" method="POST">
-					{{ page_secure }}
+				<form action="/admin/edit/page/{{ page_key }}?return_url={{ path }}" method="POST">
+					{{ permission_table }}
 					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
 				</form>
 			</div>
@@ -34,10 +34,10 @@
 	<span class="admin_tab">
 		{{ section.name }}
 		<div class="admin section_theme_html">
-			<form action="/admin/edit/theme/{{ section.key }}?return_url={{ path }}" method="POST">
-				<textarea name="section.theme.html" id="section.theme.html">{{ section.theme.html }}</textarea>
-				<textarea name="section.theme.css" id="section.theme.css">{{ section.theme.css }}</textarea>
-				<textarea name="section.theme.js" id="section.theme.js">{{ section.theme.js }}</textarea>
+			<form action="/admin/edit/theme/{{ section.theme_key }}?return_url={{ path }}" method="POST">
+				<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
+				<textarea name="section.theme.css" id="section.theme.css">{{ section.theme_css }}</textarea>
+				<textarea name="section.theme.js" id="section.theme.js">{{ section.theme_js }}</textarea>
 				<input type="submit" name="section.theme.submit" value="Save Changes"/>
 			</form>
 		</div>
@@ -52,13 +52,13 @@
 				<span class="secure_tab">Add</span>
 			</div>
 			<div class="data">
-				{{ section.data }}
+				{{ content.content_edit }}
 			</div>
 			<div class="look">
-				{{ section.look }}
+				{{ content.content_form }}
 			</div>
 			<div class="secure">
-				{{ section.secure }}
+				{{ content.content_deepform }}
 			</div>
 		</div>
 	</span>
@@ -68,7 +68,7 @@
 	<span class="admin_tab">
 		Add New Page
 		<div class="admin page.add">
-			{{ new_page }}
+			{{ page_form }}
 		</div>
 	</span>
 	<span class="admin_tab">Users
@@ -79,13 +79,13 @@
 				<span class="secure_tab">Me</span>
 			</div>
 			<div class="data">
-				{{ new_page_data }}
+				{{ user_form }}
 			</div>
 			<div class="look">
-				{{ new_page_look }}
+				{{ user_list }}
 			</div>
 			<div class="secure">
-				{{ new_page_secure }}
+				{{ user_edit_form }}
 			</div>
 		</div>
 	</span>
@@ -97,7 +97,7 @@
 				<span class="look_tab">Use Image</span>
 			</div>
 			<div class="data">
-				<form action="/admin/add/image?return_url=%s" enctype="form/multipart" method="POST">
+				<form action="/admin/add/image?return_url={{ path }}" enctype="form/multipart" method="POST">
 					<label for="image.file">
 						Image File: 
 						<span class='help'>
@@ -123,7 +123,7 @@
 				</form>
 			</div>
 			<div class="look">
-				{{ images.look }}
+				{{ images }}
 			</div>
 		</div>
 	</span>

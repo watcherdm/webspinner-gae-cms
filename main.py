@@ -172,6 +172,42 @@ def admin(handler_method):
   return redirect_if_needed
 
 class GetPage(Handler):
+  def generate_admin_html(self, page, user):
+    contents = Content.all().fetch(1000)
+    roles = Role.all().fetch(1000)
+    admindata = {
+      "page_edit" : Page.to_form(self.request.path, "edit", page.key()), 
+      "theme_edit" : Theme.to_form(self.request.path, "edit", page.theme.key(), page.key()), 
+      "page_key" : page.key(), 
+      "path" : self.request.path,
+      "permission_table" : Permission.get_table(page.key()),
+      "sections" : (
+        {
+          "name" : section.name.replace("section_","").capitalize(),
+          "theme_key" : section.theme.key(),
+          "theme_html" : section.theme.html, 
+          "theme_css" : section.theme.css, 
+          "theme_js" : section.theme.js,
+          "content" : ({
+            "content_edit" : Content.to_edit_list("title", self.request.path), 
+            "content_form" : Content.to_form(self.request.path,"edit",content.key(), section.key()), 
+            "content_deepform" : Content.to_form(self.request.path, rel_key = section.key())                
+          } for content in db.get(section.contents))
+        } for section in db.get(page.sections)
+      ),
+      "page_form" : Page.to_form(self.request.path, rel_key = self.ws.site.key()),
+      "user_form" : User.to_form(self.request.path), 
+      "user_list" : User.to_edit_list("email", self.request.path, True), 
+      "user_edit_form" : User.to_form(self.request.path, "edit", user.key() ),
+      "images" : self.ws.site.images_for_use(),
+      "contents":contents, 
+      "roles":roles
+    }
+    context = template.Context(admindata)
+    admin_template = template.Template(open("defaults/admin/tabs.html").read())
+    admin_html = admin_template.render(context)
+    return admin_html
+
   def get(self):
     if self.ws.site is None:
       self.redirect('/install')
@@ -211,41 +247,9 @@ class GetPage(Handler):
       if user:
         user_control = self.ws.users.create_logout_url(path)
         user_label = "Logout"
-        contents = Content.all().fetch(1000)
-        roles = Role.all().fetch(1000)
 
         if self.ws.users.is_current_user_admin(self):
-          admindata = {
-            "page_edit" : Page.to_form(self.request.path, "edit", page.key()), 
-            "theme_edit" : Theme.to_form(self.request.path, "edit", page.theme.key(), page.key()), 
-            "page_key" : page.key(), 
-            "path" : self.request.path, 
-            "permission_table" : Permission.get_table(page.key()),
-            "sections" : (
-              {
-                "name" : section.name.replace("section_","").capitalize(),
-                "theme_key" : section.theme.key(),
-                "theme_html" : section.theme.html, 
-                "theme_css" : section.theme.css, 
-                "theme_js" : section.theme.js,
-                "content" : ({
-                  "content_edit" : Content.to_edit_list("title", self.request.path), 
-                  "content_form" : Content.to_form(self.request.path,"edit",content.key(), section.key()), 
-                  "content_deepform" : Content.to_form(self.request.path, rel_key = section.key())                
-                } for content in db.get(section.contents))
-              } for section in db.get(page.sections)
-            ),
-            "page_form" : Page.to_form(self.request.path, rel_key = self.ws.site.key()),
-            "user_form" : User.to_form(self.request.path), 
-            "user_list" : User.to_edit_list("email", self.request.path, True), 
-            "user_edit_form" : User.to_form(self.request.path, "edit", user.key() ),
-            "images" : self.ws.site.images_for_use(),
-            "contents":contents, 
-            "roles":roles
-          }
-          context = template.Context(admindata)
-          admin_template = template.Template(open("defaults/admin/tabs.html").read())
-          admin_html = admin_template.render(context)
+          admin_html = self.generate_admin_html(page, user)
       else:
         user_control = self.ws.users.create_login_url(path)
         user_label = "Login"

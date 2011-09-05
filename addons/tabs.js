@@ -1,24 +1,25 @@
 $(function(){
 	$("div.admin_tools")
 		.find("span")
-			.toggle(function () {
-				$('div.admin').hide();
-				var $this = $(this).find(">div");
-				$this
-					.show('fast')
-					.css("top", 100 - $this.offset().top + "px")
-				$('body').click(function () {
-					$this.hide();
+			.toggle(function (e) {
+					$('div.admin').hide();
+					var $this = $(this),
+						$div = $this.find(">div");
+					$div
+						.show('fast')
+						.css("top", 100 - $this.offset().top + "px")
+					$('body').click(function (e) {
+						$div.hide();
+					});
+				},function (e) {
+					if ($(e.srcElement).hasClass("admin_tab")) {
+						$(this)
+							.find("div:not(.tab_strip, .data)")
+							.hide('fast')
+							.find(".data")
+							.show();
+					}
 				});
-			},function(e){
-				if ($(e.srcElement).hasClass("admin_tab")) {
-					$(this)
-						.find("div:not(.tab_strip, .data)")
-						.hide('fast')
-						.find(".data")
-						.show();
-				}
-			});
 	$("div.admin_tools span div").click(function (e) {
 		e.stopPropagation(); 
 		return true;
