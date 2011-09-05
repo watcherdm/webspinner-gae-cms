@@ -1,0 +1,117 @@
+div.admin {
+	display: none;
+	position: absolute;
+	height: 480px;
+	width: 640px;
+	background: #333;
+	left: 300px;
+	top: 20px;
+	border: solid 3px #fff;
+	-webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
+}
+div.admin textarea{
+	width: 630px;
+	height: 120px;
+	margin: 5px;
+	z-index: 10000;
+	background: #111;
+	color: #1f1;
+}
+div.admin_tools {
+	position: fixed;
+	top: 10px;
+	left: 0px;
+	text-align: left;
+}
+div.admin_tools>span {
+	position: relative;
+	left: 0px;
+	padding: 6px;
+	display: block;
+	height: 20px;
+	width: 150px;
+	background: #333;
+	border: solid 3px #fff;
+	-webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	color: #fff;
+	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	font-weight: bolder;
+	margin-left: -15px;
+	margin-top: 10px;
+}
+span.help {
+     display: none;
+}
+div.admin input, div.admin select,div.admin label{
+     margin: 5px;
+	width: 400px;
+}
+div.admin input[type=checkbox] {
+     width: 100px;
+}
+span.data_tab{
+     position: relative;
+	top: -23px;
+	border: solid 3px #fff;
+	border-bottom: none;
+	background: #333;
+	padding: 4px 10px ;
+	margin-left: 5px;
+	margin-right: 5px;
+	color: #fff;
+	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
+}
+span.look_tab{
+     position: relative;
+	top: -23px;
+	border: solid 3px #fff;
+	border-bottom: none;
+	background: #333;
+	padding: 4px 10px ;
+	margin-left: 5px;
+	margin-right: 5px;
+	color: #fff;
+	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
+}
+span.secure_tab{
+     position: relative;
+	top: -23px;
+	border: solid 3px #fff;
+	border-bottom: none;
+	background: #333;
+	padding: 4px 10px ;
+	margin-left: 5px;
+	margin-right: 5px;
+	color: #fff;
+	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
+}
+div.admin a {
+     text-decoration: none;
+	color: #fff;
+}
+div.admin div.data {
+     height: 480px;
+	overflow: auto;
+}
+div.admin div.look {
+     display: none;
+	height: 480px;
+	overflow: auto;
+}
+div.admin div.secure {
+     display: none;
+	height: 480px;
+	overflow: auto;
+}
+div.secure table{
+     color: white;
+	width: 100%;
+}
+div.contained {
+     background: #fff;
+	color: #111;
+	border-radius: 10px;
+	padding:10px;
+	margin: 10px;
+	font-weight: normal;
+}

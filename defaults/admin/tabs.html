@@ -1,0 +1,136 @@
+<script src="/addons/tiny_mce/jquery.tinymce.js" type="text/javascript" ></script>
+<script src="/addons/tabs.js" type="text/javascript"></script>
+<link href="/css/tabs.css" rel="stylesheet"/>
+<div class='admin_tools'>
+	<span class="admin_tab">
+		Admin Page
+		<div class="admin page_wrapper">
+			<div class="tab_strip">
+				<span class="data_tab">
+					Data
+				</span>
+				<span class="look_tab">
+					Looks
+				</span>
+				<span class="secure_tab">
+					Security
+				</span>
+			</div>
+			<div class="data">
+				{{ page_data }}
+			</div>
+			<div class="look">
+				{{ page_looks }}
+			</div>
+			<div class="secure">
+				<form action="/admin/edit/page/%s?return_url=%s" method="POST">
+					{{ page_secure }}
+					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
+				</form>
+			</div>
+		</div>
+	</span>
+	{% for section in sections %}
+	<span class="admin_tab">
+		{{ section.name }}
+		<div class="admin section_theme_html">
+			<form action="/admin/edit/theme/{{ section.key }}?return_url={{ path }}" method="POST">
+				<textarea name="section.theme.html" id="section.theme.html">{{ section.theme.html }}</textarea>
+				<textarea name="section.theme.css" id="section.theme.css">{{ section.theme.css }}</textarea>
+				<textarea name="section.theme.js" id="section.theme.js">{{ section.theme.js }}</textarea>
+				<input type="submit" name="section.theme.submit" value="Save Changes"/>
+			</form>
+		</div>
+	</span>
+	{% for content in section.content %}
+	<span class="admin_tab">
+		{{ section.name }} Content
+		<div class="admin content_edit">
+			<div class="tab_strip">
+				<span class="data_tab">List</span>
+				<span class="look_tab">Edit</span>
+				<span class="secure_tab">Add</span>
+			</div>
+			<div class="data">
+				{{ section.data }}
+			</div>
+			<div class="look">
+				{{ section.look }}
+			</div>
+			<div class="secure">
+				{{ section.secure }}
+			</div>
+		</div>
+	</span>
+	{% endfor %}
+	{% endfor %}
+	<!-- end foreach section -->
+	<span class="admin_tab">
+		Add New Page
+		<div class="admin page.add">
+			{{ new_page }}
+		</div>
+	</span>
+	<span class="admin_tab">Users
+		<div class="admin user_edit">
+			<div class="tab_strip">
+				<span class="data_tab">Data</span>
+				<span class="look_tab">List</span>
+				<span class="secure_tab">Me</span>
+			</div>
+			<div class="data">
+				{{ new_page_data }}
+			</div>
+			<div class="look">
+				{{ new_page_look }}
+			</div>
+			<div class="secure">
+				{{ new_page_secure }}
+			</div>
+		</div>
+	</span>
+	<span class="admin_tab">
+		Images
+		<div class="admin image.add">
+			<div class="tab_strip">
+				<span class="data_tab">Add Image</span>
+				<span class="look_tab">Use Image</span>
+			</div>
+			<div class="data">
+				<form action="/admin/add/image?return_url=%s" enctype="form/multipart" method="POST">
+					<label for="image.file">
+						Image File: 
+						<span class='help'>
+							the image file to store and display.
+						</span>
+					</label>
+					<input type="file" name="image.file" id="image.file" required />
+					<label for="image.title">
+						Image Title: 
+						<span class='help'>
+							the title that will be used when referring to the image in themes.
+						</span>
+					</label>
+					<input type="text" name="image.title" id="image.title" />
+					<label for="image.tags">
+						Image Tags: 
+						<span class='help'>
+							the tags associated with this image.
+						</span>
+					</label>
+					<input type="text" name="image.tags" id="image.tags" />
+					<input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
+				</form>
+			</div>
+			<div class="look">
+				{{ images.look }}
+			</div>
+		</div>
+	</span>
+	<span class="admin_tab">
+		Email Blast
+		<div class="admin email look">
+			{{ email_blast }}
+		</div>
+	</span>
+</div>
