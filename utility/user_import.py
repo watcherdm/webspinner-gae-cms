@@ -1,6 +1,6 @@
 import csv
 import StringIO
-from models import User
+from models.auth import User
 
 class UserCsv():
 	def read(self, file):
@@ -29,5 +29,8 @@ class UserCsv():
 				new_user.phone = row.get('PHONE NUMBER', None)
 			if row.get('FAX NUMBER', None):
 				new_user.fax = row.get('FAX NUMBER', None)
+			
 			new_user.put()
+		
+		#clear the user cache
 		return result

@@ -1,10 +1,13 @@
 from base_handler import Handler
-from models import Content, ThemePackage, Theme, Page, Image, Role, Section, User, Site
+from models.page import Content, Page, Section
+from models.auth import User, Role
+from models.theme import ThemePackage, Theme
+from models.site import  Site, Image
 from google.appengine.ext.webapp import template
 from google.appengine.api import memcache
 import logging
 from google.appengine.ext import db, deferred
-import user_import
+from utility import user_import
 
 ACTIONS = ['view', 'edit']
 def admin(handler_method):

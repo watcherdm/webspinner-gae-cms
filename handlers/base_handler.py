@@ -1,6 +1,7 @@
 from google.appengine.ext import webapp
 from appengine_utilities import sessions
-from models import Site, User, Role
+from models.site import Site
+from models.auth import User, Role
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
 import logging
