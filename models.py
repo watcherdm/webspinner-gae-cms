@@ -1,19 +1,14 @@
 #!/usr/env python
 
 """Models module for Webspinner GAE CMS"""
-import logging
-from appengine_utilities import sessions
-from appengine_utilities import flash
-from appengine_utilities import event
-from appengine_utilities import cache
+
+from google.appengine.api import memcache
 from appengine_utilities.rotmodel import ROTModel
 from google.appengine.ext import db
 from google.appengine.api import mail
-from django.utils import simplejson
 from hashlib import sha256
 from random import random
 import re
-from main import *
 import datetime
 import time
 
@@ -345,7 +340,6 @@ if(!window.cms){
     """]})
     page.theme = main_theme
     page.put()
-    sections = page.get_or_make_sections()
     theme_packages = ThemePackage.create({"name":["default"],"themes":[",".join([str(main_theme.key())])]})
     site.theme_packages.append(theme_packages.key())
     site.pages.append(page.key())
@@ -356,7 +350,6 @@ if(!window.cms){
       site.roles.append(role.key())
     Role.add_administrator(admin)
     site.put()
-    perms = site.build_permissions()
     return site
   def actions_joined(self):
     return ", ".join(self.actions)
@@ -721,11 +714,13 @@ class Section(WsModel):
       if page.theme.key() in theme_package.themes:
         theme_package.themes.append(section.theme.key())
         theme_package.put()
-    content = Content.create({"title":["Hello World"],
+    content = Content.create({
+      "title":["Hello World"],
       "abstract":["hi there"],
-      "content":["If you are logged in as an administratir use the menu on the left to modify the page and it's contents."],
+      "content":["If you are logged in as an administrator use the menu on the left to modify the page and it's contents."],
       "visible":["on"],
-      "tags":"cms"})
+      "tags":"cms"
+    })
     section.add_content(content.key())
     return section
 
