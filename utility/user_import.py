@@ -1,6 +1,7 @@
 import csv
 import StringIO
 from models.auth import User
+from models.site import Site
 
 class UserCsv():
 	def read(self, file):
@@ -20,7 +21,8 @@ class UserCsv():
 				continue
 			new_user = User.get_by_email(row.get('EMAILADDRESS', 'CANCEL'))
 			if not new_user:
-				new_user = User.create_user(row.get('EMAILADDRESS', 'NONE'), 'NONE')
+				site = Site.all().get()
+				new_user = User.create_user(row.get('EMAILADDRESS', 'NONE'), 'NONE', site.secret)
 			new_user.firstname = row.get('FIRST NAME', None)
 			new_user.lastname = row.get('LAST NAME', None)
 			new_user.spouse = row.get('SPOUSE', None)

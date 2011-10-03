@@ -80,7 +80,7 @@ class Site(WsModel):
     site.theme_packages.append(theme_packages.key())
     site.pages.append(page.key())
     site.put()
-    admin = User.create_user(email, password, user)
+    admin = User.create_user(email, password, site.secret, user)
     roles = Role.create_default()
     for role in roles:
       site.roles.append(role.key())

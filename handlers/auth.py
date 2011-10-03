@@ -24,8 +24,9 @@ class Auth():
       email = self.request.get("email")
       code = self.request.get("code")
       password = self.request.get("password")
+      site = Site.all().get()
       if email and not code:
-        if User.send_recovery_email(email):
+        if User.send_recovery_email(email, site.title):
           self.response.out.write("The email has been sent. Please check your email to reset your password.")
           return True
         else:
@@ -34,8 +35,7 @@ class Auth():
       elif email and code and password:
         user = User.get_by_email(email)
         if user:
-          if user.set_password(password):
-            site = Site.all().get()
+          if user.set_password(password, site.secret):
             login = User.login(email, password, site)
             self.session["user"] = login
             user.destroy_token()
