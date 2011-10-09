@@ -1,0 +1,142 @@
+from handlers.base_handler import Handler
+from models.site import Image
+from models.page import Page, Content
+from models.auth import Role, Permission, User
+from models.theme import Theme
+from google.appengine.ext.webapp import template
+
+class Resource():
+  class ImageHandler(Handler):
+    def get(self):
+      name = self.request.path.split('/')[2]
+      image = Image.get_by_name(name)
+      if image and image.file:
+        self.response.headers['Content-Type'] = 'image/PNG'
+        self.response.out.write(image.file)
+      else:
+        self.json_out({"name": name})
+
+  class CssHandler(Handler):
+    def get(self, page):
+      if page == "":
+        page = "/"
+      page = Page.get_by_name(page)
+      if page:
+        self.response.headers.add_header("Content-Type","text/css")
+        self.response.out.write(page.theme.css)
+
+
+  class PageHandler(Handler):
+    def generate_admin_html(self, page, user):
+      contents = Content.all().fetch(1000)
+      roles = Role.all().fetch(1000)
+      admindata = {
+        "page_edit" : Page.to_form(self.request.path, "edit", page.key()), 
+        "theme_edit" : Theme.to_form(self.request.path, "edit", page.theme.key(), page.key()), 
+        "page_key" : page.key(), 
+        "path" : self.request.path,
+        "permission_table" : Permission.get_table(page.key()),
+        "sections" : (
+          {
+            "name" : section.name.replace("section_","").capitalize(),
+            "theme_key" : section.theme.key(),
+            "theme_html" : section.theme.html, 
+            "theme_css" : section.theme.css, 
+            "theme_js" : section.theme.js,
+            "content" : ({
+              "content_edit" : Content.to_edit_list("title", self.request.path), 
+              "content_form" : Content.to_form(self.request.path,"edit",content.key(), section.key()), 
+              "content_deepform" : Content.to_form(self.request.path, rel_key = section.key())                
+            } for content in section.get_contents())
+          } for section in page.get_sections()
+        ),
+        "page_form" : Page.to_form(self.request.path, rel_key = self.ws.site.key()),
+        "user_form" : User.to_form(self.request.path), 
+        "user_list" : User.to_edit_list("email", self.request.path, True), 
+        "user_edit_form" : User.to_form(self.request.path, "edit", user.key() ),
+        "images" : self.ws.site.images_for_use(),
+        "contents":contents, 
+        "roles":roles
+      }
+      context = template.Context(admindata)
+      admin_template = template.Template(open("defaults/admin/tabs.html").read())
+      admin_html = admin_template.render(context)
+      return admin_html
+
+    def get(self):
+      if self.ws.site is None:
+        self.redirect('/install')
+        return False
+      path = self.request.path
+      #print path
+      user_control = ""
+      user_label = ""
+      def kv_q(x):
+        x = x.split('=')
+        if len(x) < 2:
+          return x[0]
+        return {x[0]: x[1]}
+      page = Page.get_by_name(path)
+      if not page:
+        self.error(404)
+        return False
+      if not self.permission_check(page):
+        self.error(403)
+        self.redirect(self.ws.users.create_login_url(path))
+        return False
+      admin_html = ""
+      if page:
+        if not page.theme:
+          page.theme = Theme.create({"name": ["default" + page.name], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css')],"js":[""]})
+          page.put()
+        if not page.sections:
+          page.get_or_make_sections()
+        user = self.ws.users.get_current_user(self)
+        if user:
+          user_control = self.ws.users.create_logout_url(path)
+          user_label = "Logout"
+
+          if self.ws.users.is_current_user_admin(self):
+            admin_html = self.generate_admin_html(page, user)
+        else:
+          user_control = self.ws.users.create_login_url(path)
+          user_label = "Login"
+        page_theme = page.theme
+        page_html = """<html>
+        <head>
+          <title>
+            %s
+          </title>
+          <meta http-equiv='X-UA-Compatible' content='chrome=1'>
+          <style>
+            %s
+          </style>
+        </head>
+        <body>
+          %s
+          <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js' type='text/javascript'>
+          </script>
+          <script type='text/javascript'>
+            %s
+          </script>
+          {{ admin_content }}
+        </body>
+      </html>""" % (page.title, page_theme.css, page.build_template(), page_theme.js)
+        page_template = template.Template(page_html)
+        sections = page.get_sections()
+        section_dict = {}
+        site_users = User.all().fetch(1000)
+        for section in sections:
+          section_dict[section.name] =  section
+        user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
+        template_values = {
+          "site_users": site_users, 
+          "ws":self.ws,
+          "page": page, 
+          "sections": section_dict, 
+          "user_control_link": user_control_link, 
+          'admin_content': admin_html
+        }
+        self.render_string_out(page_template, template_values)
+      else:
+        self.error(404)
