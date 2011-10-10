@@ -26,6 +26,32 @@ def admin(handler_method):
   return redirect_if_needed
 
 class Admin():
+  class Install(Handler):
+    def get(self):
+      site = Site.all().get()
+      if(site):
+        self.redirect("/")
+      self.render_out("templates/install.html")
+    def post(self):
+      site = Site.all().get()
+      if(site):
+        self.redirect("/")
+      save_items = {'site.title':'','site.admin':'','site.password':''}
+      form_items = ['site.title','site.admin','site.password']
+      for item in form_items:
+        if item in self.request.arguments():
+          if self.request.get(item) != "":
+            save_items[item] = self.request.get(item)
+          else:
+            self.json_out({"success":False,"message":"%s is not entered" % item})
+            return False
+        else:
+          self.json_out({"success":False,"message":"%s is not in the form" % item})
+          return False
+      user = self.ws.users.get_current_user()
+      site = Site.create(save_items['site.admin'],save_items['site.password'],save_items['site.title'],user)
+      self.redirect('/')
+
   class Administrate(Handler):
     @admin
     def get(self):
@@ -58,7 +84,6 @@ class Admin():
       if type.capitalize() in globals():
         cls = globals()[type.capitalize()]
         if cls:
-          #self.response.out.write(dir(cls))
           values = {}
           for k in self.request.arguments():
             value = self.request.get_all(k)
@@ -76,7 +101,6 @@ class Admin():
             self.response.out.write("Failed to update")
         else:
           self.response.out.write(self.request.get("return_url"))
-        #self.response.out.write(dir(record._properties[record._properties.keys()[0]].__subclasshook__))
 
   class EditItem(Handler):
     #TODO: finish dynamic form builder

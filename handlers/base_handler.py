@@ -4,7 +4,6 @@ from models.site import Site
 from models.auth import User, Role
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
-import logging
 from google.appengine.ext import db
 from google.appengine.api import memcache
 
@@ -23,7 +22,6 @@ class Webspinner():
     cuser = self.users.get_current_user(self.handler)
     if cuser:
       user_role = cuser.roles()
-      logging.info(user_role)
     else:
       user_role = "Anonymous"
     html_out = memcache.get("menu_%s" % user_role )
@@ -32,8 +30,9 @@ class Webspinner():
     html_out = "<ul class='site_menu'>"
     pages = memcache.get('site-pages')
     if not pages :
-        pages = db.get(self.site.pages)
-        memcache.set('site-pages', pages)
+      self.site.sanity_check()
+      pages = db.get(self.site.pages)
+      memcache.set('site-pages', pages)
     def top_level(page):
       if not page.ancestor:
         return True
@@ -64,7 +63,7 @@ class Webspinner():
         user = User.get(handler.session['user'])
         return user
       else:
-        return None
+        return None  
 
     @classmethod
     def is_current_user_admin(cls, handler):
@@ -82,6 +81,9 @@ class Webspinner():
     def create_login_url(ws, return_page):
       return "/login?return_url=%s" % return_page
     @classmethod
+    def create_account_url(ws, return_page):
+      return "/account?return_url=%s" % return_page
+    @classmethod
     def create_logout_url(ws, return_page):
       return "/logout?return_url=%s" %return_page
 
@@ -94,11 +96,16 @@ class Handler(webapp.RequestHandler):
   def json_out(self, data):
     self.response.headers.add_header("Content-Type","application/json")
     self.response.out.write(simplejson.dumps(data))
+  def render_json(self, data):
+    return simplejson.dumps(data)
   def render_out(self, template_file, values = {}):
     self.response.out.write(template.render(template_file,values))
   def render_string_out(self, template_object, template_values):
     context = template.Context(template_values)
     self.response.out.write(template_object.render(context))
+  def render_string(self, template_object, template_values):
+    context = template.Context(template_values)
+    return template_object.render(context)
   def permission_check(self, page):
     perms = db.get(page.permissions)
     anonrole = Role.all().filter("name", "Anonymous").get()
@@ -121,4 +128,3 @@ class Handler(webapp.RequestHandler):
         return True
     else:
       return True
-      # default to show the page, no permissions is the same as anonymous

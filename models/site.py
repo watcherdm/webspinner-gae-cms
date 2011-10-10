@@ -73,7 +73,7 @@ class Site(WsModel):
     site.tags = ['cms']
     site.secret = str(random())
     page = Page.create({"name":["/"],"ancestor":["None"],"title":["Default Webspinner Page"],"menu_name":["Home"],"visible":[True], "page_chain":"/","tags": site.tags})
-    main_theme = Theme.create({"name": ["default"], "html":[open('defaults/tempalte.html').read()],"css":[open('defaults/template.css').read()],"js":[]})
+    main_theme = Theme.create({"name": ["default"], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css').read()],"js":[]})
     page.theme = main_theme
     page.put()
     theme_packages = ThemePackage.create({"name":["default"],"themes":[",".join([str(main_theme.key())])]})
@@ -142,3 +142,4 @@ class Image(WsModel):
     site.images.append(img.key())
     site.put()
     return img
+WsModel.Site = Site

@@ -14,6 +14,8 @@ class ThemePackage(WsModel):
     theme_package.put()
     return theme_package
 
+WsModel.ThemePackage = ThemePackage
+
 class Theme(WsModel):
   """ Theme relieves the need for static file upload
     Each theme element contains the complete html, css and js
@@ -27,3 +29,4 @@ class Theme(WsModel):
   html = WsModel.db.TextProperty()
   css = WsModel.db.TextProperty()
   js = WsModel.db.TextProperty()
+WsModel.Theme = Theme

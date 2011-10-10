@@ -6,6 +6,7 @@ import re
 from .base_model import WsModel
 from .theme import Theme, ThemePackage
 from .auth import User
+import logging
 
 def string_to_tags(site, tags):
   result = list(set([x.lstrip().rstrip() for x in tags.split(",")]))
@@ -81,7 +82,10 @@ class Page(WsModel):
       result.append(is_section)
     self.put()
     return result
-
+  
+  def get_sections(self):
+    return WsModel.db.get(self.sections)
+WsModel.Page = Page
 
 class Section(WsModel):
   """ Section is a wrapper class for the each logical section in a page.
@@ -136,17 +140,21 @@ class Section(WsModel):
       return None
 
   def add_content(self, content_key):
+    logging.info('Content add called %s' % content_key)
     self.contents.append(content_key)
     self.put()
     return content_key
 
   def contents_by_created(self):
     return self.__class__.get_newest(self.contents)
-
+  
+  def get_contents(self):
+    return WsModel.db.get(self.contents)
+WsModel.Section = Section
 class Content(WsModel):
   """ Content is a wrapper class for the content elements in a section.
   """
-  _relfields = [{"model":"Section","field":"contents","value":"key","method":"add_content"}]
+  _relfields = [{"model": "Section","field":"contents","value":"key","method":"add_content"}]
   _modfields = [{"name":"title","type":"text"},
     {"name":"abstract","type":"textarea"},
     {"name":"content","type":"textareahtml"},
@@ -161,4 +169,4 @@ class Content(WsModel):
   created_by_user = WsModel.db.ReferenceProperty(User)
   visible = WsModel.db.BooleanProperty()
   tags = WsModel.db.StringListProperty()
-
+WsModel.Content = Content

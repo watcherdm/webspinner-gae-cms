@@ -1,5 +1,6 @@
 import datetime
 import time
+import logging
 from google.appengine.ext import db
 from appengine_utilities.rotmodel import ROTModel
 from google.appengine.api import memcache
@@ -63,8 +64,8 @@ class WsModel(ROTModel):
       if len(model._relfields) > 0:
         name = "edit_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
         if name in dict_values:
-          if model._relfields[0]["model"] in globals():
-            model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
+          if model._relfields[0]["model"]:
+            model_to = WsModel[model._relfields[0]["model"]].get(dict_values[name])
             if model_to and len(model_to) > 0:
               if model._relfields[0]["field"] in model_to[0].properties():
                 if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
@@ -96,7 +97,10 @@ class WsModel(ROTModel):
         elif ".BooleanProperty" in fitype:
           dict_values[key] = dict_values[key] != ""
         elif ".ReferenceProperty" in fitype:
-          dict_values[key] = None if "".join(dict_values[key]) == "None" else db.get(dict_values[key])
+          try:
+            dict_values[key] = db.get(dict_values[key])
+          except:
+            dict_values[key] = None
         elif ".ListProperty" in fitype:
           dict_values[key] = [object.key() for object in db.get("".join(dict_values[key]).split(","))]
         else:
@@ -106,8 +110,9 @@ class WsModel(ROTModel):
     if len(model._relfields) > 0:
       name = "add_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
       if name in dict_values:
-        if model._relfields[0]["model"] in globals():
-          model_to = globals()[model._relfields[0]["model"]].get(dict_values[name])
+        if getattr( WsModel, model._relfields[0]["model"]):
+          model_to = db.get(dict_values[name])
+          logging.info('Model retrieved for key %s : %s' % (dict_values[name], model_to.__str__()))
           if model_to:
             if model._relfields[0]["field"] in model_to.properties():
               if ".ListProperty" in model_to.properties()[model._relfields[0]["field"]].__str__():
@@ -118,6 +123,8 @@ class WsModel(ROTModel):
               else:
                 setattr(model_to, model._relfields[0]["field"], model)
               model_to.put()
+        else:
+          logging.info('Model type %s not found in globals' % model._relfields[0]['model'])
     
     if(cls.__name__ == "Page"):
       memcache.delete("site-pages")
@@ -142,7 +149,7 @@ class WsModel(ROTModel):
     return html_out
 
   @classmethod
-  def to_form(cls, return_url, mode = "add", model_key = None, rel_key = None):
+  def to_form(cls, return_url = "/", mode = "add", model_key = None, rel_key = None):
     html_out = ""
     if model_key:
       model = cls.get(model_key)
@@ -151,7 +158,8 @@ class WsModel(ROTModel):
       model = cls()
       html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
     if rel_key and len(model._relfields) > 0:
-      name = mode + '_' + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
+      model_name = model._relfields[0]["model"].lower()
+      name = mode + '_' + model_name + "-" + model._relfields[0]["value"].lower()
       html_out += "<input type='hidden' value='%s' name='%s' id='%s' />" % (rel_key, name, name)
     for field in model._modfields:
       key = field["name"]
@@ -219,6 +227,26 @@ class WsModel(ROTModel):
   @classmethod
   def get_newest(cls, keys = None):
     return cls.get_order_by_field(keys, "date_created", "DESC")
+
+  def sanity_check(self):
+    result = {
+      'checked' : [],
+      'removed' : []
+    }
+    for key, property in self.properties().iteritems():
+      fitype = property.__class__.__str__(property)
+      if ".ListProperty" in fitype:
+        result['checked'].append(key)
+        for id in getattr(self, key):
+          obj = db.get(id)
+          if not obj:
+            result[key] = result[key] or []
+            property.remove(id)
+            result[key].append(id)
+            result['removed'].append(id)
+    if len(result['removed']) > 0:
+      self.save()
+    return result
 
 WsModel.db = db
 WsModel.memcache = memcache

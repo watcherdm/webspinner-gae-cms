@@ -62,7 +62,9 @@ class Resource():
       admin_template = template.Template(open("defaults/admin/tabs.html").read())
       admin_html = admin_template.render(context)
       return admin_html
-
+    
+    def generate_user_html(self, page, user):
+      return "test"
     def get(self):
       if self.ws.site is None:
         self.redirect('/install')
@@ -87,14 +89,14 @@ class Resource():
       admin_html = ""
       if page:
         if not page.theme:
-          page.theme = Theme.create({"name": ["default" + page.name], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css')],"js":[""]})
+          page.theme = Theme.create({"name": ["default" + page.name], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css').read()],"js":[""]})
           page.put()
         if not page.sections:
           page.get_or_make_sections()
         user = self.ws.users.get_current_user(self)
         if user:
-          user_control = self.ws.users.create_logout_url(path)
-          user_label = "Logout"
+          user_control = self.ws.users.create_account_url(path)
+          user_label = "Account"
 
           if self.ws.users.is_current_user_admin(self):
             admin_html = self.generate_admin_html(page, user)
@@ -102,40 +104,29 @@ class Resource():
           user_control = self.ws.users.create_login_url(path)
           user_label = "Login"
         page_theme = page.theme
-        page_html = """<html>
-        <head>
-          <title>
-            %s
-          </title>
-          <meta http-equiv='X-UA-Compatible' content='chrome=1'>
-          <style>
-            %s
-          </style>
-        </head>
-        <body>
-          %s
-          <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js' type='text/javascript'>
-          </script>
-          <script type='text/javascript'>
-            %s
-          </script>
-          {{ admin_content }}
-        </body>
-      </html>""" % (page.title, page_theme.css, page.build_template(), page_theme.js)
-        page_template = template.Template(page_html)
+        page_content_template = template.Template(page.build_template())
         sections = page.get_sections()
         section_dict = {}
         site_users = User.all().fetch(1000)
         for section in sections:
           section_dict[section.name] =  section
         user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
-        template_values = {
+        page_content_template_values = {
           "site_users": site_users, 
           "ws":self.ws,
-          "page": page, 
-          "sections": section_dict, 
-          "user_control_link": user_control_link, 
-          'admin_content': admin_html
+          "page": page,
+          "sections": section_dict,
+          "user_control_link": user_control_link
+        }
+        page_content = self.render_string(page_content_template, page_content_template_values)
+        page_template_html = open("defaults/outer.html").read()
+        page_template = template.Template(page_template_html)
+        template_values = {
+          "title" : page.title,
+          "css" : page_theme.css,
+          "content" : page_content,
+          "js" : page_theme.js,
+          "admin_content": admin_html
         }
         self.render_string_out(page_template, template_values)
       else:

@@ -71,3 +71,14 @@ class Auth():
     def get(self):
       self.session.delete_item("user")
       self.redirect(self.request.get("return_url"))
+
+  class Account(Handler):
+    def get(self):
+      return_url = self.request.get("return_url")
+      model_key = self.session['user']
+      template_values = {
+        'return_url': return_url, 
+        'account_edit' : User.to_form(return_url, mode ="edit", model_key = model_key),
+        'logout' : self.ws.users.create_logout_url(return_url)
+      }
+      self.render_out("templates/account.html", template_values)
