@@ -48,7 +48,7 @@ class Admin():
         else:
           self.json_out({"success":False,"message":"%s is not in the form" % item})
           return False
-      user = self.ws.users.get_current_user()
+      user = self.ws.users.get_current_user(self)
       site = Site.create(save_items['site.admin'],save_items['site.password'],save_items['site.title'],user)
       self.redirect('/')
 
