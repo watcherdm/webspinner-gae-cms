@@ -84,11 +84,8 @@ $.plugin = {
 		}
 	}
 }
-
+ns('webspinner.admin');
 // webspinner.admin jquery plugins
-if(!window.webspinner){
-	webspinner = {};
-}
 webspinner.admin = {
 	show_panel: {
 		init: function(options, elem){
@@ -101,7 +98,9 @@ webspinner.admin = {
 			this.$elem.click(function(e){
 				var $this = $(this);
 				$("div.admin_tab>div.admin").hide();
-				var tab = $this.attr("class").replace("_tab", "");
+				var tab = $this.attr("class").split(' ').filter(function(className){
+					return className.indexOf('_tab') > -1;
+				})[0].replace("_tab", "");
 				$this
 					.parents("div.admin")
 					.show()

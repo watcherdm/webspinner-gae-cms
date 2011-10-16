@@ -208,10 +208,11 @@ class Admin():
   class ImportItem(Handler):
     @admin
     def post(self, type):
-      csv_content = self.request.get('csv')
-      self.response.headers.add_header("Content-Type","text/javascript")
-      self.json_out(user_import.UserCsv().read(csv_content))
-      return True
+      if type.lower() == 'users':
+        csv_content = self.request.get('csv')
+        self.json_out(user_import.UserCsv().read(csv_content))
+      else:
+        self.json_out({"error" : "Unsupported method"})
 
   class ListJavascript(Handler):
     @admin
