@@ -19,15 +19,15 @@ class Role(WsModel):
       new_role.name = role
       new_role.put()
       roles.append(new_role)
-    WsModel.memcache.set('roles', roles)
+    WsModel.cache.add('roles', roles)
     return roles
   def add_user(self, user_key):
     self.users.append(user_key);
     self.put()
-    WsModel.memcache.set('role_' + self.name + '_users', self.users)
+    WsModel.cache.add('role_' + self.name + '_users', self.users)
   @classmethod
   def add_administrator(cls, user):
-    adminrole = filter(lambda x : x.name == "Administrator", WsModel.memcache.get('roles'))
+    adminrole = filter(lambda x : x.name == "Administrator", WsModel.cache.get('roles'))
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
     adminrole.put()
@@ -182,7 +182,7 @@ IAOS.net""" % (user.firstname, user.lastname, link))
     roles = WsModel.memcache.get("roles")
     if not roles:
       roles = Role.all().fetch(1000)
-      WsModel.memcache.set("roles", roles)
+      WsModel.cache.add("roles", roles)
     role_out = "<select name='role'>"
     for role in roles:
       user_role = self.roles()[0].name if self.roles() else "Anonymous"

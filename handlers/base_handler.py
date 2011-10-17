@@ -5,34 +5,37 @@ from models.auth import User, Role
 from django.utils import simplejson
 from google.appengine.ext.webapp import template
 from google.appengine.ext import db
-from google.appengine.api import memcache
+from utility.cache import Cache
+import logging
+
+cache = Cache()
 
 class Webspinner():
   def __init__(self, handler):
-    site = memcache.get("site")
+    site = cache.get("site")
     if site:
       self.site = site
     else:
       site = Site.all().get()
-      memcache.set("site", site)
+      cache.add("site", site)
       self.site = site
     self.handler = handler
 
   def get_nav_list(self):
+    logging.info('Getting nav list')
     cuser = self.users.get_current_user(self.handler)
     if cuser:
       user_role = cuser.roles()
     else:
       user_role = "Anonymous"
-    html_out = memcache.get("menu_%s" % user_role )
+    html_out = cache.get("menu_%s" % user_role )
     if html_out:
       return html_out
     html_out = "<ul class='site_menu'>"
-    pages = memcache.get('site-pages')
+    pages = cache.get('site-pages')
     if not pages :
-      self.site.sanity_check()
       pages = db.get(self.site.pages)
-      memcache.set('site-pages', pages)
+      cache.add('site-pages', pages)
     def top_level(page):
       if not page.ancestor:
         return True
@@ -53,7 +56,7 @@ class Webspinner():
       if self.handler.permission_check(page):
         html_out = add_page_to_menu(page, html_out)
     html_out += "</ul>"
-    memcache.set("menu_%s" % user_role, html_out)
+    cache.add("menu_%s" % user_role, html_out)
     return html_out
 
   class users:

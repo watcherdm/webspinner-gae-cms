@@ -74,13 +74,13 @@ class Admin():
 
   class AddItem(Handler):
     @admin
-    def get(self, type):
+    def get(self, type, format):
       if type.capitalize() in globals():
         cls = globals()[type.capitalize()]
         if cls:
           self.response.out.write(cls.to_form("/"))
     @admin
-    def post(self, type):
+    def post(self, type, format):
       if type.capitalize() in globals():
         cls = globals()[type.capitalize()]
         if cls:
@@ -96,7 +96,10 @@ class Admin():
             values[k] = self.request.get(k)
           result = cls.create(values)
           if result:
-            self.redirect(self.request.get("return_url"))
+            if format == 'html':
+              self.redirect(self.request.get("return_url"))
+            elif format == 'json':
+              self.json_out(result)
           else:
             self.response.out.write("Failed to update")
         else:
@@ -105,7 +108,7 @@ class Admin():
   class EditItem(Handler):
     #TODO: finish dynamic form builder
     @admin
-    def get(self, args):
+    def get(self, args, format):
       type = args.split("/")[0]
       key = args.split("/")[1]
       return_url = self.request.get("return_url")
@@ -115,7 +118,7 @@ class Admin():
           self.response.out.write(cls.to_form(return_url, "edit", key))
 
     @admin
-    def post(self, args):
+    def post(self, args, format):
       type = args.split("/")[0]
       key = args.split("/")[1].split("?")[0]
       if type.capitalize() in globals():
@@ -139,8 +142,10 @@ class Admin():
             values[k] = self.request.get_all(k)
           result = cls.update(values)
           if result:
-            #print result
-            self.redirect(self.request.get("return_url"))
+            if format == 'html':
+              self.redirect(self.request.get("return_url"))
+            elif format == 'json':
+              self.json_out(result)
           else:
             self.response.out.write("Failed to update")
         else:

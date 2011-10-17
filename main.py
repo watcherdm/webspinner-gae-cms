@@ -17,9 +17,9 @@ from handlers.resource import Resource
 from utility.handler import Utility
 
 ROUTES = [('/admin', Admin.Administrate),
-          ('/admin/add/(.+)', Admin.AddItem),
-          ('/admin/edit/(.+)', Admin.EditItem),
-          ('/admin/delete/(.+)', Admin.DeleteItem),
+          ('/admin/add/(.+)\.(html|json)', Admin.AddItem),
+          ('/admin/edit/(.+)\.(html|json)', Admin.EditItem),
+          ('/admin/delete/(.+)\.(html|json)', Admin.DeleteItem),
           ('/admin/download/(.+)', Admin.ExportItem),
           ('/admin/import/(.+)', Admin.ImportItem),
           ('/admin/set_user_roles/(.*)', Admin.SetUserRoles),
