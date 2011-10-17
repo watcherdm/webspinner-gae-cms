@@ -2,27 +2,28 @@
 <script src="/addons/tabs.js" type="text/javascript"></script>
 <link href="/css/tabs.css" rel="stylesheet"/>
 <div class='admin_tools'>
-	<span class="admin_tab">
+	<span class="admin_tab pages dark-bg-grad">
+		<span class="icon"></span>
 		Admin Page
 		<div class="admin page_wrapper">
 			<div class="tab_strip">
-				<span class="data_tab tab">
+				<span class="data_tab tab dark-bg-grad">
 					Data
 				</span>
-				<span class="look_tab tab">
+				<span class="look_tab tab dark-bg-grad">
 					Looks
 				</span>
-				<span class="secure_tab tab">
+				<span class="secure_tab tab dark-bg-grad">
 					Security
 				</span>
 			</div>
-			<div class="data tabcontent">
+			<div class="data tabcontent dark-bg-grad default">
 				{{ page_edit }}
 			</div>
-			<div class="look tabcontent">
+			<div class="look tabcontent dark-bg-grad">
 				{{ theme_edit }}
 			</div>
-			<div class="secure tabcontent">
+			<div class="secure tabcontent dark-bg-grad">
 				<form action="/admin/edit/page/{{ page_key }}?return_url={{ path }}" method="POST">
 					{{ permission_table }}
 					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
@@ -31,76 +32,82 @@
 		</div>
 	</span>
 	{% for section in sections %}
-	<span class="admin_tab">
-		{{ section.name }}
-		<div class="admin section_theme_html">
-			<form action="/admin/edit/theme/{{ section.theme_key }}?return_url={{ path }}" method="POST">
-				<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
-				<textarea name="section.theme.css" id="section.theme.css">{{ section.theme_css }}</textarea>
-				<textarea name="section.theme.js" id="section.theme.js">{{ section.theme_js }}</textarea>
-				<input type="submit" name="section.theme.submit" value="Save Changes"/>
-			</form>
-		</div>
-	</span>
-	{% for content in section.content %}
-	<span class="admin_tab">
-		{{ section.name }} Content
-		<div class="admin content_edit">
-			<div class="tab_strip">
-				<span class="data_tab tab">List</span>
-				<span class="look_tab tab">Edit</span>
-				<span class="secure_tab tab">Add</span>
+		<span class="admin_tab sections dark-bg-grad">
+			<span class="icon" ></span>
+			{{ section.name }}
+			<div class="admin tabcontent dark-bg-grad default section_theme_html">
+				<form action="/admin/edit/theme/{{ section.theme_key }}?return_url={{ path }}" method="POST">
+					<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
+					<textarea name="section.theme.css" id="section.theme.css">{{ section.theme_css }}</textarea>
+					<textarea name="section.theme.js" id="section.theme.js">{{ section.theme_js }}</textarea>
+					<input type="submit" name="section.theme.submit" value="Save Changes"/>
+				</form>
 			</div>
-			<div class="data tabcontent">
-				{{ content.content_edit }}
+		</span>
+		{% for content in section.content %}
+		<span class="admin_tab dark-bg-grad contents">
+			<span class="icon" ></span>
+			{{ content.title }}
+			<div class="admin content_edit">
+				<div class="tab_strip">
+					<span class="data_tab tab dark-bg-grad">List</span>
+					<span class="look_tab tab dark-bg-grad">Edit</span>
+					<span class="secure_tab tab dark-bg-grad">Add</span>
+				</div>
+				<div class="data tabcontent dark-bg-grad default">
+					{{ content.content_edit }}
+				</div>
+				<div class="look tabcontent dark-bg-grad">
+					{{ content.content_form }}
+				</div>
+				<div class="secure tabcontent dark-bg-grad">
+					{{ content.content_deepform }}
+				</div>
 			</div>
-			<div class="look tabcontent">
-				{{ content.content_form }}
-			</div>
-			<div class="secure tabcontent">
-				{{ content.content_deepform }}
-			</div>
-		</div>
-	</span>
-	{% endfor %}
+		</span>
+		{% endfor %}
 	{% endfor %}
 	<!-- end foreach section -->
-	<span class="admin_tab">
+	<span class="admin_tab dark-bg-grad addpage">
+		<span class="icon" ></span>
 		Add New Page
-		<div class="admin page.add">
+		<div class="admin page.add dark-bg-grad">
 			{{ page_form }}
 		</div>
 	</span>
-	<span class="admin_tab">Users
+	<span class="admin_tab dark-bg-grad users">
+		<span class="icon" ></span>
+		Users
 		<div class="admin user_edit">
 			<div class="tab_strip">
-				<span class="data_tab tab">Data</span>
-				<span class="look_tab tab">List</span>
-				<span class="secure_tab tab">Me</span>
-				<span class="import_tab tab">Import</span>
+				<span class="data_tab tab dark-bg-grad">Data</span>
+				<span class="look_tab tab dark-bg-grad">List</span>
+				<span class="secure_tab tab dark-bg-grad">Me</span>
+				<span class="import_tab tab dark-bg-grad">Import</span>
 			</div>
-			<div class="data tabcontent">
+			<div class="data tabcontent dark-bg-grad default">
 				{{ user_form }}
 			</div>
-			<div class="look tabcontent">
+			<div class="look tabcontent dark-bg-grad">
 				{{ user_list }}
 			</div>
-			<div class="secure tabcontent">
+			<div class="secure tabcontent dark-bg-grad">
 				{{ user_edit_form }}
 			</div>
-			<div class='import tabcontent'>
+			<div class='import tabcontent dark-bg-grad'>
 				{{ user_import }}
 			</div>
 		</div>
 	</span>
-	<span class="admin_tab">
+	<span class="admin_tab dark-bg-grad images">
+		<span class="icon" ></span>
 		Images
 		<div class="admin image.add">
 			<div class="tab_strip">
-				<span class="data_tab tab">Add Image</span>
-				<span class="look_tab tab">Use Image</span>
+				<span class="data_tab tab dark-bg-grad">Add Image</span>
+				<span class="look_tab tab dark-bg-grad">Use Image</span>
 			</div>
-			<div class="data tabcontent">
+			<div class="data tabcontent dark-bg-grad default">
 				<form action="/admin/add/image?return_url={{ path }}" enctype="form/multipart" method="POST">
 					<label for="image.file">
 						Image File: 
@@ -126,14 +133,15 @@
 					<input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
 				</form>
 			</div>
-			<div class="look tabcontent">
+			<div class="look tabcontent dark-bg-grad">
 				{{ images }}
 			</div>
 		</div>
 	</span>
-	<span class="admin_tab">
+	<span class="admin_tab dark-bg-grad emails">
+		<span class="icon" ></span>
 		Email Blast
-		<div class="admin email look">
+		<div class="admin email dark-bg-grad">
 			{{ email_blast }}
 		</div>
 	</span>

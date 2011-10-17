@@ -49,6 +49,13 @@ class Auth():
           return False
       return False
 
+  class Status(Handler):
+    def get(self):
+      user = self.ws.users.get_current_user(self);
+      if user:
+        self.json_out({"loggedin" : True, "user" : user.to_dict(['password','salt', 'oauth'])});
+      else:
+        self.json_out({"loggedin" : False})
   class Login(Handler):
     def get(self):
       template_values = {'return_url': self.request.get("return_url")}

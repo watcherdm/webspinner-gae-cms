@@ -1,0 +1,21 @@
+.overlay {
+	position: absolute;
+	top : 0px;
+	left : 0px;
+	height : 100%;
+	width : 100%;
+	display : none;
+	background-color : rgba(128,128,128,0.5);
+}
+.container {
+	position: fixed;
+	top: 20%%;
+	left: 50%;
+	width: 400px;
+	height: 200px;
+	background: white;
+	border-radius: 12px;
+	padding: 16px;
+	border: solid 3px rgba(0, 0, 0, 0.8);
+	margin-left: -200px;
+}

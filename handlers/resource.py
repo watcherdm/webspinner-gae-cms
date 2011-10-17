@@ -44,6 +44,7 @@ class Resource():
             "theme_css" : section.theme.css, 
             "theme_js" : section.theme.js,
             "content" : ({
+              "title" : content.title,
               "content_edit" : Content.to_edit_list("title", self.request.path), 
               "content_form" : Content.to_form(self.request.path,"edit",content.key(), section.key()), 
               "content_deepform" : Content.to_form(self.request.path, rel_key = section.key())                
@@ -111,7 +112,7 @@ class Resource():
         site_users = User.all().fetch(1000)
         for section in sections:
           section_dict[section.name] =  section
-        user_control_link = "<a href='%s' class='user.control'>%s</a>" % (user_control, user_label)
+        user_control_link = "<a href='%s' class='account control'>%s</a>" % (user_control, user_label)
         page_content_template_values = {
           "site_users": site_users, 
           "ws":self.ws,

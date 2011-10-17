@@ -9,10 +9,12 @@ wysiwyg_plugin = "tinymce"
 
 SIMPLE_TYPES = (int, long, float, bool, dict, basestring)
 
-def to_dict(model):
+def to_dict(model, ignore = []):
   output = {}
-
+  output['id'] = model.key().__str__();
   for key, prop in model.properties().iteritems():
+    if key in ignore:
+     continue
     value = getattr(model, key)
 
     if value is None or isinstance(value, SIMPLE_TYPES):
@@ -247,6 +249,8 @@ class WsModel(ROTModel):
     if len(result['removed']) > 0:
       self.save()
     return result
+  def to_dict(self, ignore=[]):
+    return to_dict(self, ignore)
 
 WsModel.db = db
 WsModel.memcache = memcache

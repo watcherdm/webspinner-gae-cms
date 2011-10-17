@@ -18,6 +18,9 @@ handlers:
 - url: /addons
   static_dir: addons
 
+- url: /icons
+  static_dir: icons
+
 - url: /gaeutilities/css
   static_dir: appengine_utilities/interface/css
 

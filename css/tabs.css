@@ -1,13 +1,26 @@
+.dark-bg-grad {
+	background-color: #666;
+	background-image: -webkit-gradient(linear, left top, left bottom, from(#666), to(#222222)); 
+	background-image: -webkit-linear-gradient(top, #666, #222222); 
+	background-image:    -moz-linear-gradient(top, #666, #222222); 
+	background-image:     -ms-linear-gradient(top, #666, #222222); 
+	background-image:      -o-linear-gradient(top, #666, #222222); 
+	background-image:         linear-gradient(top, #666, #222222);
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorStr='#666', EndColorStr='#222222'); 
+}
+
 div.admin {
 	display: none;
 	position: absolute;
 	height: 480px;
 	width: 640px;
-	background: #333;
 	left: 300px;
 	top: 20px;
 	border: solid 3px #fff;
 	-webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	-moz-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	-o-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	-ms-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
 }
 div.admin textarea{
 	width: 630px;
@@ -30,7 +43,6 @@ div.admin_tools>span {
 	display: block;
 	height: 20px;
 	width: 150px;
-	background: #333;
 	border: solid 3px #fff;
 	-webkit-box-shadow: 0px 1px 1px rgba(0,0,0,.8);
 	color: #fff;
@@ -51,15 +63,14 @@ div.admin input[type=checkbox] {
 }
 span.tab {
 	position: relative;
-	top: -23px;
+	top: -22px;
 	border: solid 3px #fff;
 	border-bottom: none;
-	background: #333;
 	padding: 4px 10px ;
 	margin-left: 5px;
 	margin-right: 5px;
 	color: #fff;
-	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
+	text-shadow: 0px -1px 1px rgba(0,0,0,.8);
 }
 div.admin a {
 	text-decoration: none;
@@ -69,6 +80,13 @@ div.admin div.tabcontent {
 	display: none;
 	height: 480px;
 	overflow: auto;
+	text-indent : 0px;
+}
+.tab_strip {
+	height : 0px;
+}
+div.admin div.default {
+	display : block;
 }
 div.secure table{
 	color: white;
@@ -81,4 +99,32 @@ div.contained {
 	padding:10px;
 	margin: 10px;
 	font-weight: normal;
+}
+.icon {
+	display : inline-block;
+	width : 16px;
+	height : 16px;	
+	background-repeat : no-repeat;
+	text-indent : -999px;
+}
+.admin_tools .pages .icon{
+	background-image : url('/icons/page.png');
+}
+.admin_tools .sections .icon {
+	background-image : url('/icons/section.png');	
+}
+.admin_tools .contents .icon {
+	background-image : url('/icons/content.png');
+}
+.admin_tools .addpage .icon {
+	background-image : url('/icons/addpage.png');
+}
+.admin_tools .users .icon {
+	background-image : url('/icons/user.png');
+}
+.admin_tools .images .icon {
+	background-image : url('/icons/image.png');
+}
+.admin_tools .emails .icon {
+	background-image : url('/icons/email.png');
 }
