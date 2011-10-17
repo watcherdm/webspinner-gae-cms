@@ -48,7 +48,7 @@ class Admin():
         else:
           self.json_out({"success":False,"message":"%s is not in the form" % item})
           return False
-      user = self.ws.users.get_current_user()
+      user = self.ws.users.get_current_user(self)
       site = Site.create(save_items['site.admin'],save_items['site.password'],save_items['site.title'],user)
       self.redirect('/')
 
@@ -213,10 +213,11 @@ class Admin():
   class ImportItem(Handler):
     @admin
     def post(self, type):
-      csv_content = self.request.get('csv')
-      self.response.headers.add_header("Content-Type","text/javascript")
-      self.json_out(user_import.UserCsv().read(csv_content))
-      return True
+      if type.lower() == 'users':
+        csv_content = self.request.get('csv')
+        self.json_out(user_import.UserCsv().read(csv_content))
+      else:
+        self.json_out({"error" : "Unsupported method"})
 
   class ListJavascript(Handler):
     @admin

@@ -6,24 +6,24 @@
 		Admin Page
 		<div class="admin page_wrapper">
 			<div class="tab_strip">
-				<span class="data_tab">
+				<span class="data_tab tab">
 					Data
 				</span>
-				<span class="look_tab">
+				<span class="look_tab tab">
 					Looks
 				</span>
-				<span class="secure_tab">
+				<span class="secure_tab tab">
 					Security
 				</span>
 			</div>
-			<div class="data">
+			<div class="data tabcontent">
 				{{ page_edit }}
 			</div>
-			<div class="look">
+			<div class="look tabcontent">
 				{{ theme_edit }}
 			</div>
-			<div class="secure">
-				<form action="/admin/edit/page/{{ page_key }}.html?return_url={{ path }}" method="POST">
+			<div class="secure tabcontent">
+				<form action="/admin/edit/page/{{ page_key }}?return_url={{ path }}" method="POST">
 					{{ permission_table }}
 					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
 				</form>
@@ -47,17 +47,17 @@
 		{{ section.name }} Content
 		<div class="admin content_edit">
 			<div class="tab_strip">
-				<span class="data_tab">List</span>
-				<span class="look_tab">Edit</span>
-				<span class="secure_tab">Add</span>
+				<span class="data_tab tab">List</span>
+				<span class="look_tab tab">Edit</span>
+				<span class="secure_tab tab">Add</span>
 			</div>
-			<div class="data">
+			<div class="data tabcontent">
 				{{ content.content_edit }}
 			</div>
-			<div class="look">
+			<div class="look tabcontent">
 				{{ content.content_form }}
 			</div>
-			<div class="secure">
+			<div class="secure tabcontent">
 				{{ content.content_deepform }}
 			</div>
 		</div>
@@ -74,18 +74,22 @@
 	<span class="admin_tab">Users
 		<div class="admin user_edit">
 			<div class="tab_strip">
-				<span class="data_tab">Data</span>
-				<span class="look_tab">List</span>
-				<span class="secure_tab">Me</span>
+				<span class="data_tab tab">Data</span>
+				<span class="look_tab tab">List</span>
+				<span class="secure_tab tab">Me</span>
+				<span class="import_tab tab">Import</span>
 			</div>
-			<div class="data">
+			<div class="data tabcontent">
 				{{ user_form }}
 			</div>
-			<div class="look">
+			<div class="look tabcontent">
 				{{ user_list }}
 			</div>
-			<div class="secure">
+			<div class="secure tabcontent">
 				{{ user_edit_form }}
+			</div>
+			<div class='import tabcontent'>
+				{{ user_import }}
 			</div>
 		</div>
 	</span>
@@ -93,11 +97,11 @@
 		Images
 		<div class="admin image.add">
 			<div class="tab_strip">
-				<span class="data_tab">Add Image</span>
-				<span class="look_tab">Use Image</span>
+				<span class="data_tab tab">Add Image</span>
+				<span class="look_tab tab">Use Image</span>
 			</div>
-			<div class="data">
-				<form action="/admin/add/image.html?return_url={{ path }}" enctype="form/multipart" method="POST">
+			<div class="data tabcontent">
+				<form action="/admin/add/image?return_url={{ path }}" enctype="form/multipart" method="POST">
 					<label for="image.file">
 						Image File: 
 						<span class='help'>
@@ -122,7 +126,7 @@
 					<input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
 				</form>
 			</div>
-			<div class="look">
+			<div class="look tabcontent">
 				{{ images }}
 			</div>
 		</div>

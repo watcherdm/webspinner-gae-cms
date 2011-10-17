@@ -40,7 +40,7 @@ div.admin_tools>span {
 	margin-top: 10px;
 }
 span.help {
-     display: none;
+	display: none;
 }
 div.admin input, div.admin select,div.admin label{
     margin: 5px;
@@ -48,34 +48,10 @@ div.admin input, div.admin select,div.admin label{
 	display : inline-block;
 }
 div.admin input[type=checkbox] {
-     width: 100px;
+	width: 100px;
 }
-span.data_tab{
-     position: relative;
-	top: -23px;
-	border: solid 3px #fff;
-	border-bottom: none;
-	background: #333;
-	padding: 4px 10px ;
-	margin-left: 5px;
-	margin-right: 5px;
-	color: #fff;
-	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
-}
-span.look_tab{
-     position: relative;
-	top: -23px;
-	border: solid 3px #fff;
-	border-bottom: none;
-	background: #333;
-	padding: 4px 10px ;
-	margin-left: 5px;
-	margin-right: 5px;
-	color: #fff;
-	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
-}
-span.secure_tab{
-     position: relative;
+span.tab {
+	position: relative;
 	top: -23px;
 	border: solid 3px #fff;
 	border-bottom: none;
@@ -87,29 +63,20 @@ span.secure_tab{
 	text-shadow: 0px 1px 1px rgba(0,0,0,.8);
 }
 div.admin a {
-     text-decoration: none;
+	text-decoration: none;
 	color: #fff;
 }
-div.admin div.data {
-     height: 480px;
-	overflow: auto;
-}
-div.admin div.look {
-     display: none;
-	height: 480px;
-	overflow: auto;
-}
-div.admin div.secure {
-     display: none;
+div.admin div.tabcontent {
+	display: none;
 	height: 480px;
 	overflow: auto;
 }
 div.secure table{
-     color: white;
+	color: white;
 	width: 100%;
 }
 div.contained {
-     background: #fff;
+	background: #fff;
 	color: #111;
 	border-radius: 10px;
 	padding:10px;

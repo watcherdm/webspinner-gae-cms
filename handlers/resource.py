@@ -54,6 +54,7 @@ class Resource():
         "user_form" : User.to_form(self.request.path), 
         "user_list" : User.to_edit_list("email", self.request.path, True), 
         "user_edit_form" : User.to_form(self.request.path, "edit", user.key() ),
+        "user_import" : open('defaults/admin/user_import.html').read(),
         "images" : self.ws.site.images_for_use(),
         "contents":contents, 
         "roles":roles
