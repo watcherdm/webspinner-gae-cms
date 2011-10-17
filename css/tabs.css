@@ -43,8 +43,9 @@ span.help {
      display: none;
 }
 div.admin input, div.admin select,div.admin label{
-     margin: 5px;
-	width: 400px;
+    margin: 5px;
+	min-width: 170px;
+	display : inline-block;
 }
 div.admin input[type=checkbox] {
      width: 100px;

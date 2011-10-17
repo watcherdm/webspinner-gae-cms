@@ -3,17 +3,18 @@
 		<title>{{ title }}</title>
 		<meta http-equiv='X-UA-Compatible' content='chrome=1'>
 		<style>{{ css }}</style>
-	</head>
-	<body>
-		{{ content }}
 		<script src="/addons/underscore.js" type="text/javascript">
 		</script>
 		<script src="/addons/backbone.js" type="text/javascript">
 		</script>
-		<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js' type='text/javascript'>
+		<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js' type='text/javascript'></script>
+		<script src="/js/nsjs.min.js" type="text/javascript"></script>
+	</head>
+	<body>
+		{{ content }}
 		</script>
 		<script type='text/javascript'>
-			{{ js }}
+{{ js }}
 		</script>
 		<!-- ADMIN CONTENT -->
 		{{ admin_content }}

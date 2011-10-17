@@ -4,6 +4,7 @@ import logging
 from google.appengine.ext import db
 from appengine_utilities.rotmodel import ROTModel
 from google.appengine.api import memcache
+from utility.cache import Cache
 
 wysiwyg_plugin = "tinymce"
 
@@ -65,24 +66,22 @@ class WsModel(ROTModel):
         name = "edit_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
         if name in dict_values:
           if model._relfields[0]["model"]:
-            model_to = WsModel[model._relfields[0]["model"]].get(dict_values[name])
-            if model_to and len(model_to) > 0:
-              if model._relfields[0]["field"] in model_to[0].properties():
-                if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
-                  list_model_keys = getattr(model_to[0], model._relfields[0]["field"])
-                  list_model_keys.append(model.key())
-                  list_model_keys = list(set(list_model_keys))
-                  setattr(model_to[0], model._relfields[0]["field"], list_model_keys)
-                else:
-                  setattr(model_to[0], model._relfields[0]["field"], model)
-                model_to[0].put()
+            model_to = getattr( WsModel, model._relfields[0]["model"])
+            if model_to:
+              model_to = db.get(dict_values[name])
+              if model_to and len(model_to) > 0:
+                if model._relfields[0]["field"] in model_to[0].properties():
+                  if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
+                    list_model_keys = getattr(model_to[0], model._relfields[0]["field"])
+                    list_model_keys.append(model.key())
+                    list_model_keys = list(set(list_model_keys))
+                    setattr(model_to[0], model._relfields[0]["field"], list_model_keys)
+                  else:
+                    setattr(model_to[0], model._relfields[0]["field"], model)
+                  model_to[0].put()
       if(cls.__name__ == "Page"):
-        memcache.delete("site-pages")
-        memcache.delete("menu_Administrator")
-        memcache.delete("menu_Anonymous")
-        memcache.delete("menu_User")
-      memcache.delete("%s_all" % cls.__name__.lower())
-      return model
+        WsModel.cache.clear()
+      to_dict(model)
     else:
       return None
 
@@ -127,25 +126,21 @@ class WsModel(ROTModel):
           logging.info('Model type %s not found in globals' % model._relfields[0]['model'])
     
     if(cls.__name__ == "Page"):
-      memcache.delete("site-pages")
-      memcache.delete("menu_Administrator")
-      memcache.delete("menu_Anonymous")
-      memcache.delete("menu_User")
-    memcache.delete("%s_all" % cls.__name__.lower())
-    return model
+      WsModel.cache.clear()
+    return to_dict(model)
 
   @classmethod
   def to_edit_list(cls, display_field_name = "name", return_url = "/", include_security=False):
     html_out = ''
-    models = memcache.get("%s_all" % cls.__name__.lower())
+    models = WsModel.cache.get("%s_all" % cls.__name__.lower())
     if not models:
       models = cls.all().fetch(1000)
-      memcache.set("%s_all" % cls.__name__.lower(), models)
+      WsModel.cache.add("%s_all" % cls.__name__.lower(), models)
     for model in models:
-      link_html = "<a href='/admin/edit/%s/%s?return_url=%s'>%s</a> "
+      link_html = "<a href='/admin/delete/%s/%s?return_url=%s'>delete</a><a href='/admin/edit/%s/%s?return_url=%s'>%s</a> "
       if include_security:
         link_html += " <a href='/admin/set_user_roles/%s?return_url=%s'>Modify Roles</a>" % (model.key(), return_url)
-      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) + "<br />"
+      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) + "<br />"
     return html_out
 
   @classmethod
@@ -153,7 +148,7 @@ class WsModel(ROTModel):
     html_out = ""
     if model_key:
       model = cls.get(model_key)
-      html_out += "<form action='/admin/%s/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), model_key, return_url)
+      html_out += "<form action='/admin/%s/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), model_key, return_url)
     else:
       model = cls()
       html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
@@ -240,8 +235,9 @@ class WsModel(ROTModel):
         for id in getattr(self, key):
           obj = db.get(id)
           if not obj:
-            result[key] = result[key] or []
-            property.remove(id)
+            if not key in result:
+              result[key] = []
+            getattr(self, key).remove(id)
             result[key].append(id)
             result['removed'].append(id)
     if len(result['removed']) > 0:
@@ -250,3 +246,4 @@ class WsModel(ROTModel):
 
 WsModel.db = db
 WsModel.memcache = memcache
+WsModel.cache = Cache()

@@ -40,25 +40,25 @@ class Site(WsModel):
     self.after_get()
   @classmethod
   def get_secret(cls):
-    secret = WsModel.memcache.get("site_secret")
+    secret = WsModel.cache.get("site_secret")
     if secret:
       return secret
     else:
       secret = cls.all().get().secret
       if secret:
-        WsModel.memcache.set("site_secret", secret)
+        WsModel.cache.add("site_secret", secret)
         return secret
       else:
         return False
   @classmethod
   def get_title(cls):
-    title = WsModel.memcache.get("site_title")
+    title = WsModel.cache.get("site_title")
     if title:
       return title
     else:
       title = cls.all().get().title
       if title:
-        WsModel.memcache.set("site_title", title)
+        WsModel.cache.add("site_title", title)
         return title
       else:
         return False

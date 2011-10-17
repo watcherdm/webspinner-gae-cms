@@ -1,5 +1,5 @@
 <script src="/addons/tiny_mce/jquery.tinymce.js" type="text/javascript" ></script>
-<script src="/addons/tabs.js" type="text/javascript"></script>
+<script src="/js/tabs.js" type="text/javascript"></script>
 <link href="/css/tabs.css" rel="stylesheet"/>
 <div class='admin_tools'>
 	<span class="admin_tab">
@@ -23,7 +23,7 @@
 				{{ theme_edit }}
 			</div>
 			<div class="secure">
-				<form action="/admin/edit/page/{{ page_key }}?return_url={{ path }}" method="POST">
+				<form action="/admin/edit/page/{{ page_key }}.html?return_url={{ path }}" method="POST">
 					{{ permission_table }}
 					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
 				</form>
@@ -34,11 +34,11 @@
 	<span class="admin_tab">
 		{{ section.name }}
 		<div class="admin section_theme_html">
-			<form action="/admin/edit/theme/{{ section.theme_key }}?return_url={{ path }}" method="POST">
-				<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
-				<textarea name="section.theme.css" id="section.theme.css">{{ section.theme_css }}</textarea>
-				<textarea name="section.theme.js" id="section.theme.js">{{ section.theme_js }}</textarea>
-				<input type="submit" name="section.theme.submit" value="Save Changes"/>
+			<form action="/admin/edit/theme/{{ section.theme_key }}.html?return_url={{ path }}" method="POST">
+				<textarea name="edit_theme-html" id="section-edit_theme-html">{{ section.theme_html }}</textarea>
+				<textarea name="edit_theme-css" id="section-edit_theme-css">{{ section.theme_css }}</textarea>
+				<textarea name="edit_theme-js" id="section-edit_theme-js">{{ section.theme_js }}</textarea>
+				<input type="submit" name="theme.submit" value="Save Changes"/>
 			</form>
 		</div>
 	</span>
@@ -97,7 +97,7 @@
 				<span class="look_tab">Use Image</span>
 			</div>
 			<div class="data">
-				<form action="/admin/add/image?return_url={{ path }}" enctype="form/multipart" method="POST">
+				<form action="/admin/add/image.html?return_url={{ path }}" enctype="form/multipart" method="POST">
 					<label for="image.file">
 						Image File: 
 						<span class='help'>
