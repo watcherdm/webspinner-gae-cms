@@ -1,17 +1,10 @@
-<html>
-  <head>
-    <title>Login</title>
-    <link href="/css/main.css" rel="stylesheet"/>
-  </head>
-  <body>
-    <form action="/login" method="POST">
-      <label for="user.email"><h2>Email Address:</h2></label>
-      <input type="email" name="user.email" placeholder="you@somedomain.com" required id="user.email"/>
-      <label for="user.password"><h2>Password:</h2></label>
-      <input type="password" name="user.password" required id="user.password"/><br/>
-      <input type="hidden" name="return_url" value="{{ return_url }}"/>
-      <input type="submit" name="user.login" value="Login"/>
-      <a href="/pwrecovery/">Reset Password</a>
-    </form>
-  </body>
-</html>
+  <link href="/css/main.css" rel="stylesheet"/>
+  <form action="/login" method="POST">
+    <label for="user.email"><h2>Email Address:</h2></label>
+    <input type="email" name="user.email" placeholder="you@somedomain.com" required id="user.email"/>
+    <label for="user.password"><h2>Password:</h2></label>
+    <input type="password" name="user.password" required id="user.password"/><br/>
+    <input type="hidden" name="return_url" value="{{ return_url }}"/>
+    <input type="submit" name="user.login" value="Login"/>
+    <a href="/pwrecovery/">Reset Password</a>
+  </form>

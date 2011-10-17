@@ -6,8 +6,24 @@
 			
 		}
 	}));
+	webspinner.ns('utility');
+	webspinner.utility.load('http', (function(){
+		return {
+			isHTML : function(jqxhr){
+				return jqxhr.getResponseHeader('Content-Type').indexOf('text/html') > -1;
+			},
+			isJSON : function(jqxhr){
+				return jqxhr.getResponseHeader('Content-Type').indexOf('application/javascript') > -1;
+			}
+
+		}
+	}()));
 	webspinner.ns('ui');
 	webspinner.ui.load('Modal', Backbone.View.extend({
+		events : {
+			'click .container' : 'action',
+			'click' : 'hide'
+		},
 		initialize : function(options){
 			this.$el = $(this.el);
 			this.$container = this.$('.container');
@@ -16,9 +32,26 @@
 			this.$container.append(contents);
 			this.$el.fadeIn();
 		},
-		hide : function(){
-			this.$el.fadeOut();
-			this.$container.empty();
+		hide : function(e){
+			this.$el.fadeOut(this.$container.empty.bind(this.$container));
+		},
+		action : function(e){
+			if ( $(e.target).attr('href') ){
+				$.get($(e.target).attr('href')).done($.proxy(function(resp, status, jqxhr){
+					if ( webspinner.utility.http.isHTML(jqxhr) ){
+						if ( $(resp).find('head') ){
+							$('html').html(resp);
+						} else {
+							this.$container.html(resp);							
+						}
+					}
+				}, this));
+			} else if ( $(e.target).attr('type') === 'submit' ){
+				var $form = $(e.target).parent('form');
+				$form.submit();
+			}
+			e.stopImmediatePropagation();
+			return false;
 		}
 	}));
 
@@ -83,11 +116,11 @@
 			el : $('.account.control'),
 			model : webspinner.account.status
 		});
-		webspinner.account.controls.button.bind('showform', function(data){
-			webspinner.ui.modal.show(data);
-		});
 		webspinner.ui.modal = new webspinner.ui.Modal({
 			el : $('.overlay')
+		});
+		webspinner.account.controls.button.bind('showform', function(data){
+			webspinner.ui.modal.show(data);
 		});
 	}
 	$(webspinner.bootstrap);

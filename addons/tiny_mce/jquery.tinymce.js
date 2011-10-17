@@ -112,7 +112,7 @@
 					}
 				})
 			}
-			this.find("span.mceEditor,div.mceEditor").each(function(n,o){
+			this.find && this.find("span.mceEditor,div.mceEditor").each(function(n,o){
 				var m=tinyMCE.get(o.id.replace(/_parent$/,""));
 				if(m){
 					m.remove()

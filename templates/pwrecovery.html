@@ -1,25 +1,17 @@
-<html>
-	<head>
-		<title>Request Password Reset</title>
-		<link href="/css/main.css" rel="stylesheet"/>
-	</head>
-	<body>
-		{% if code %}
-		<form action="/pwrecovery/" method="POST">
-			Reset password for {{ email }}:<br />
-			<input type="hidden" id="code" name="code" value="{{ code }}"/>
-			<input type="hidden" id="email" name="email" value="{{ email }}"/>
-			<label for="password">Password:</label>
-			<input type="password" name="password" id="password"/>
-			<input type="submit" name="submit" value="Save Password"/>
-		</form>
-		{% else %}
-		<form action="/pwrecovery/" method="POST">
-			<label for="email">Email Address:</label>
-			<input type="email" name="email" id="email"/>
-			<input type="submit" name="submit" value="Reset Password"/>
-		</form>
-		{% endif %}
-	</body>
-	
-</html>
+<link href="/css/main.css" rel="stylesheet"/>
+{% if code %}
+<form action="/pwrecovery/" method="POST">
+	Reset password for {{ email }}:<br />
+	<input type="hidden" id="code" name="code" value="{{ code }}"/>
+	<input type="hidden" id="email" name="email" value="{{ email }}"/>
+	<label for="password">Password:</label>
+	<input type="password" name="password" id="password"/>
+	<input type="submit" name="submit" value="Save Password"/>
+</form>
+{% else %}
+<form action="/pwrecovery/" method="POST">
+	<label for="email">Email Address:</label>
+	<input type="email" name="email" id="email"/>
+	<input type="submit" name="submit" value="Reset Password"/>
+</form>
+{% endif %}

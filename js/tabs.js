@@ -1,4 +1,3 @@
-
 $(function(){
 	$("div.admin_tools")
 		.find("span")
@@ -15,9 +14,9 @@ $(function(){
 				},function (e) {
 					if ($(e.srcElement).hasClass("admin_tab")) {
 						$(this)
-							.find("div:not(.tab_strip, .data)")
+							.find("div:not(.tab_strip, .default)")
 							.hide('fast')
-							.find(".data")
+							.find(".default")
 							.show();
 					}
 				});
@@ -55,100 +54,97 @@ $(function(){
 			return true;
 		});
 	});
-	$("form").bind('submit', function(){
-		var $this = $(this);
-		$.post($this.attr('action').replace(/\.html/g, '.json'), $this.serialize()).done(function(resp){
-			console.log(resp);
-		});
-		return false;
-	});
 });
-$.plugin = {
-	addFunction : function(name, object){
-		$.fn[name] = function(options){
-			var args = Array.prototype.slice.call(arguments, 1);
-			if(this.length){
-				return this.each(function(){
-					var instance = $.data(this, name);
-					if(instance){
-						instance[options].apply(instance, args);
-					}else{
-						instance = $.data(this, name, Object.create(object).init(options, this));
-					}
+(function(){
+	$.plugin = {
+		addFunction : function(name, object){
+			$.fn[name] = function(options){
+				var args = Array.prototype.slice.call(arguments, 1);
+				if(this.length){
+					return this.each(function(){
+						var instance = $.data(this, name);
+						if(instance){
+							instance[options].apply(instance, args);
+						}else{
+							instance = $.data(this, name, Object.create(object).init(options, this));
+						}
+					});
+				}else{
+					return this;
+				}
+			}
+		},
+		removeFunction : function(name){
+			delete $.fn[name];
+		},
+		listFunctions : function(){
+			for(k in $.fn){
+				if(typeof $.fn[k] === "function"){
+					console.log(k);
+				}
+			}
+		}
+	}
+	var webspinner = nsjs.ns('webspinner');
+	webspinner.ns('admin');
+	// webspinner.admin jquery plugins
+	webspinner.admin = {
+		show_panel: {
+			init: function(options, elem){
+				this.options = $.extend({}, this.options, options);
+				this.elem = elem;
+				this.$elem = $(elem);
+				this._build()
+			},
+			_build: function(){
+				this.$elem.click(function(e){
+					var $this = $(this);
+					$("div.admin_tab>div.admin").hide();
+					var tab = $this.attr("class").split(' ').filter(function(className){
+						return className.indexOf('_tab') > -1;
+					})[0].replace("_tab", "");
+					$this
+						.parents("div.admin")
+						.show()
+						.children(":not(.tab_strip)")
+						.hide();
+					$this
+						.parents(".admin")
+						.find("." + tab)
+						.show();
 				});
-			}else{
-				return this;
 			}
-		}
-	},
-	removeFunction : function(name){
-		delete $.fn[name];
-	},
-	listFunctions : function(){
-		for(k in $.fn){
-			if(typeof $.fn[k] === "function"){
-				console.log(k);
+		},
+		ajax_edit: {
+			init: function(options, elem){
+				this.options = $.extend({}, this.options, options);
+				this.elem = elem;
+				this.$elem = $(elem);
+				this._build();
+			},
+			_build: function(){
+				var object = this;
+				this.$elem.click(function(){
+					$.get($(this).attr("href"), function(data){
+						$(object.options.result)
+							.html(data);
+						$(object.options.result)
+							.show();
+					});
+					if(typeof object.options.callback === "function"){
+						object.options.callback.apply(this);
+					}
+					return false;
+				})
+			},
+			options : {
+				result : null,
+				callback : function(){
+					console.log("callback fired!")
+				}
 			}
 		}
 	}
-}
-
-// webspinner.admin jquery plugins
-ns('webspinner.admin');
-
-webspinner.admin.show_panel = {
-	init: function(options, elem){
-		this.options = $.extend({}, this.options, options);
-		this.elem = elem;
-		this.$elem = $(elem);
-		this._build()
-	},
-	_build: function(){
-		this.$elem.click(function(e){
-			var $this = $(this);
-			$("div.admin_tab>div.admin").hide();
-			var tab = $this.attr("class").replace("_tab", "");
-			$this
-				.parents("div.admin")
-				.show()
-				.children(":not(.tab_strip)")
-				.hide();
-			$this
-				.parents(".admin")
-				.find("." + tab)
-				.show();
-		});
-	}
-};
-webspinner.admin.ajax_edit= {
-	init: function(options, elem){
-		this.options = $.extend({}, this.options, options);
-		this.elem = elem;
-		this.$elem = $(elem);
-		this._build();
-	},
-	_build: function(){
-		var object = this;
-		this.$elem.click(function(){
-			$.get($(this).attr("href"), function(data){
-				$(object.options.result)
-					.html(data);
-				$(object.options.result)
-					.show();
-			});
-			if(typeof object.options.callback === "function"){
-				object.options.callback.apply(this);
-			}
-			return false;
-		})
-	},
-	options : {
-		result : null,
-		callback : function(){
-			console.log("callback fired!")
-		}
-	}
-};
-
-$.plugin.addFunction('ajax_edit',webspinner.admin.ajax_edit);
-$.plugin.addFunction('show_panel', webspinner.admin.show_panel);
+	$.plugin.addFunction('ajax_edit',webspinner.admin.ajax_edit);
+	$.plugin.addFunction('show_panel', webspinner.admin.show_panel);	
+}());
