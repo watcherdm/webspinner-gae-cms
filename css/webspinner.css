@@ -152,3 +152,16 @@ span.head {font-weight: bold; text-align: left;}
 	font-weight : bolder;
 	cursor : pointer;
 }
+.delete {
+	background-image : url('/icons/delete.png');
+	height : 16px;
+	width : 16px;
+	text-indent : -9999px;
+	display: inline-block;
+}
+.user-edit-list {
+	list-style-type : none;
+}
+.user a {
+	margin : 3px;
+}

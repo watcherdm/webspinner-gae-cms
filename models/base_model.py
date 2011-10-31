@@ -143,16 +143,18 @@ class WsModel(ROTModel):
 
   @classmethod
   def to_edit_list(cls, display_field_name = "name", return_url = "/", include_security=False):
-    html_out = ''
+    html_out = '<ol class="%s-edit-list">' % cls.__name__.lower()
     models = WsModel.cache.get("%s_all" % cls.__name__.lower())
     if not models:
       models = cls.all().fetch(1000)
       WsModel.cache.add("%s_all" % cls.__name__.lower(), models)
     for model in models:
-      link_html = "<a href='/admin/delete/%s/%s?return_url=%s'>delete</a><a href='/admin/edit/%s/%s?return_url=%s'>%s</a> "
+      link_html = "<li class='%s'><a href='/admin/delete/%s/%s.html?return_url=%s' class='delete'>delete</a><a href='/admin/edit/%s/%s.html?return_url=%s'>%s</a> "
       if include_security:
-        link_html += " <a href='/admin/set_user_roles/%s?return_url=%s'>Modify Roles</a>" % (model.key(), return_url)
-      html_out += link_html % (cls.__name__.lower(), model.key(), return_url,cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name)) + "<br />"
+        link_html += " <a href='/admin/set_user_roles/%s.html?return_url=%s'>Modify Roles</a>" % (model.key(), return_url)
+      link_html += '</li>'
+      html_out += link_html % (cls.__name__.lower(),cls.__name__.lower(), model.key(), return_url,cls.__name__.lower(), model.key(), return_url,getattr(model, display_field_name))
+    html_out += '</ol>'
     return html_out
 
   @classmethod

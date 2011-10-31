@@ -1,5 +1,6 @@
 import csv
 import StringIO
+import cache
 from models.auth import User
 from models.site import Site
 
@@ -41,4 +42,5 @@ class UserCsv():
 			new_user.put()
 		
 		#clear the user cache
+		cache.Cache().clear()
 		return result
