@@ -12,11 +12,16 @@ cache = Cache()
 
 class Webspinner():
   def __init__(self, handler):
-    site = cache.get("site")
-    if site:
-      self.site = site
-    else:
-      site = Site.all().get()
+    try:
+      site = cache.get("site")
+      if site:
+        self.site = site
+      else:
+        site = Site.all().get()
+        cache.add("site", site)
+        self.site = site
+    except:
+      site = Site.all().get();
       cache.add("site", site)
       self.site = site
     self.handler = handler

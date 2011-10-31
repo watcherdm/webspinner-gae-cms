@@ -1,4 +1,4 @@
-<form name="user-import" action="/admin/import/users" method="POST">
+<form name="user-import" action="/admin/import/users" enctype="multipart/form-data" method="POST">
 	<input type="file" name="csv" accept="text/csv"/>
 	<input type="submit" value="Import Users"/>
 </form>

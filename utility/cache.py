@@ -9,5 +9,4 @@ class Cache():
   def get(self, key):
     return memcache.get(key)
   def clear(self):
-    for key in self.keys:
-      memcache.delete(key)
+    return memcache.flush_all();

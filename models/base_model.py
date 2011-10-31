@@ -45,7 +45,7 @@ class WsModel(ROTModel):
   _relfields = []
   _modfields = []
   @classmethod
-  def update(cls, dict_values):
+  def update(cls, dict_values, responsetype = 'Model'):
     if "key" in dict_values:
       model = db.get("".join(dict_values["key"]))
       for key, property in model.properties().iteritems():
@@ -83,12 +83,17 @@ class WsModel(ROTModel):
                   model_to[0].put()
       if(cls.__name__ == "Page"):
         WsModel.cache.clear()
-      to_dict(model)
+      if responsetype == 'Model':
+        return model
+      elif responsetype == 'Dict':
+        return to_dict(model)
+      elif responsetype == 'Status':
+        return True
     else:
       return None
 
   @classmethod
-  def create(cls, dict_values):
+  def create(cls, dict_values, responsetype = 'Model'):
     model = cls()
     for key in dict_values:
       if key in cls.properties():
@@ -129,7 +134,12 @@ class WsModel(ROTModel):
     
     if(cls.__name__ == "Page"):
       WsModel.cache.clear()
-    return to_dict(model)
+    if responsetype == 'Model':
+      return model
+    elif responsetype == 'Dict':
+      return to_dict(model)
+    elif responsetype == 'Status':
+      return True
 
   @classmethod
   def to_edit_list(cls, display_field_name = "name", return_url = "/", include_security=False):
@@ -153,7 +163,7 @@ class WsModel(ROTModel):
       html_out += "<form action='/admin/%s/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), model_key, return_url)
     else:
       model = cls()
-      html_out += "<form action='/admin/%s/%s?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
+      html_out += "<form action='/admin/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
     if rel_key and len(model._relfields) > 0:
       model_name = model._relfields[0]["model"].lower()
       name = mode + '_' + model_name + "-" + model._relfields[0]["value"].lower()

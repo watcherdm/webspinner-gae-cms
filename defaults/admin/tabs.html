@@ -24,7 +24,7 @@
 				{{ theme_edit }}
 			</div>
 			<div class="secure tabcontent dark-bg-grad">
-				<form action="/admin/edit/page/{{ page_key }}?return_url={{ path }}" method="POST">
+				<form action="/admin/edit/page/{{ page_key }}.html?return_url={{ path }}" method="POST">
 					{{ permission_table }}
 					<input type="submit" name="page.permissions.submit" value="Save Permissions"/>
 				</form>
@@ -36,7 +36,7 @@
 			<span class="icon" ></span>
 			{{ section.name }}
 			<div class="admin tabcontent dark-bg-grad default section_theme_html">
-				<form action="/admin/edit/theme/{{ section.theme_key }}?return_url={{ path }}" method="POST">
+				<form action="/admin/edit/theme/{{ section.theme_key }}.html?return_url={{ path }}" method="POST">
 					<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
 					<textarea name="section.theme.css" id="section.theme.css">{{ section.theme_css }}</textarea>
 					<textarea name="section.theme.js" id="section.theme.js">{{ section.theme_js }}</textarea>
@@ -108,29 +108,29 @@
 				<span class="look_tab tab dark-bg-grad">Use Image</span>
 			</div>
 			<div class="data tabcontent dark-bg-grad default">
-				<form action="/admin/add/image?return_url={{ path }}" enctype="form/multipart" method="POST">
-					<label for="image.file">
+				<form action="/admin/add/image.html?return_url={{ path }}" enctype="form/multipart" method="POST">
+					<label for="image_file">
 						Image File: 
 						<span class='help'>
 							the image file to store and display.
 						</span>
 					</label>
-					<input type="file" name="image.file" id="image.file" required />
-					<label for="image.title">
+					<input type="file" name="file" id="image_file" required />
+					<label for="image_title">
 						Image Title: 
 						<span class='help'>
 							the title that will be used when referring to the image in themes.
 						</span>
 					</label>
-					<input type="text" name="image.title" id="image.title" />
-					<label for="image.tags">
+					<input type="text" name="title" id="image_title" />
+					<label for="image_tags">
 						Image Tags: 
 						<span class='help'>
 							the tags associated with this image.
 						</span>
 					</label>
-					<input type="text" name="image.tags" id="image.tags" />
-					<input type="submit" name="image.submit" id="image.submit" value="Upload Image"/>
+					<input type="text" name="tags" id="image_tags" />
+					<input type="submit" value="Upload Image"/>
 				</form>
 			</div>
 			<div class="look tabcontent dark-bg-grad">

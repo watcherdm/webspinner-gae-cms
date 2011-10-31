@@ -6,7 +6,9 @@ from models.site import Site
 class UserCsv():
 	def read(self, file):
 		result = {
-			"data" : []
+			"errors" : [],
+			"data" : [],
+			"dialect" : None
 		}
 		csvio = StringIO.StringIO(file)
 		dialect = csv.Sniffer().sniff(file)
@@ -17,12 +19,16 @@ class UserCsv():
 			Here we need to render each user account
 			store it and get ready to start sending emails etc.
 			"""
-			if not row.get('EMAILADDRESS', None):
+			if not row.get('             E-MAIL  ADDRESS', None):
+				result['errors'].append({
+					"message" : "Could not retrieve field             E-MAIL  ADDRESS",
+					"row" : row
+				})
 				continue
-			new_user = User.get_by_email(row.get('EMAILADDRESS', 'CANCEL'))
+			new_user = User.get_by_email(row.get('             E-MAIL  ADDRESS', 'CANCEL'))
 			if not new_user:
 				site = Site.all().get()
-				new_user = User.create_user(row.get('EMAILADDRESS', 'NONE'), 'NONE', site.secret)
+				new_user = User.create_user(row.get('             E-MAIL  ADDRESS', 'NONE'), 'NONE', site.secret)
 			new_user.firstname = row.get('FIRST NAME', None)
 			new_user.lastname = row.get('LAST NAME', None)
 			new_user.spouse = row.get('SPOUSE', None)
