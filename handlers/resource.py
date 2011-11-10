@@ -7,7 +7,8 @@ from google.appengine.ext.webapp import template
 
 class Resource():
   class ImageHandler(Handler):
-    def get(self):
+    def get(self, imgid):
+      
       name = self.request.path.split('/')[2]
       image = Image.get_by_name(name)
       if image and image.file:

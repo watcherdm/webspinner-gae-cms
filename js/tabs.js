@@ -26,7 +26,7 @@ $(function(){
 	});
 	$("div.admin_tools span div.admin>div.tab_strip>span")
 		.show_panel();
-	$("div.content_edit>div.data>a")
+	$(".content-edit-list .content a")
 		.ajax_edit({
 			result:"div.content_edit>div.look",
 			callback: function(){
@@ -34,7 +34,7 @@ $(function(){
 					.trigger("click");
 			}
 		});
-	$("div.user_edit>div.look>a")
+	$(".user_edit .user-edit-list .user a")
 		.ajax_edit({
 			result:"div.user_edit>div.data",
 			callback: function(){

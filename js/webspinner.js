@@ -22,33 +22,38 @@
 	webspinner.ui.load('Modal', Backbone.View.extend({
 		events : {
 			'click .container' : 'action',
+			'click .close' : 'hide',
 			'click' : 'hide'
 		},
 		initialize : function(options){
 			this.$el = $(this.el);
 			this.$container = this.$('.container');
+			this.$close = this.$('close')
 		},
 		show : function(contents){
 			this.$container.append(contents);
 			this.$el.fadeIn();
 		},
+		clean : function(){
+			this.$container.find(':not(.close)').remove();
+		},
 		hide : function(e){
-			this.$el.fadeOut(this.$container.empty.bind(this.$container));
+			this.$el.fadeOut(this.clean.bind(this));
 		},
 		action : function(e){
-			if ( $(e.target).attr('href') ){
-				$.get($(e.target).attr('href')).done($.proxy(function(resp, status, jqxhr){
+			var $target = $(e.target);
+			if ( $target.hasClass('nonajax') ){
+				return true;
+			}
+			if ( $target.attr('type') === 'submit' ){
+				var $form = $target.parent('form');
+				$form.submit();
+			} else if ( $target.attr('href') ){
+				$.get($target.attr('href')).done($.proxy(function(resp, status, jqxhr){
 					if ( webspinner.utility.http.isHTML(jqxhr) ){
-						if ( $(resp).find('head') ){
-							$('html').html(resp);
-						} else {
-							this.$container.html(resp);							
-						}
+						this.$container.html(resp);							
 					}
 				}, this));
-			} else if ( $(e.target).attr('type') === 'submit' ){
-				var $form = $(e.target).parent('form');
-				$form.submit();
 			}
 			e.stopImmediatePropagation();
 			return false;

@@ -1,10 +1,9 @@
-  <link href="/css/main.css" rel="stylesheet"/>
-  <form action="/login" method="POST">
-    <label for="user.email"><h2>Email Address:</h2></label>
-    <input type="email" name="user.email" placeholder="you@somedomain.com" required id="user.email"/>
-    <label for="user.password"><h2>Password:</h2></label>
-    <input type="password" name="user.password" required id="user.password"/><br/>
-    <input type="hidden" name="return_url" value="{{ return_url }}"/>
-    <input type="submit" name="user.login" value="Login"/>
-    <a href="/pwrecovery/">Reset Password</a>
-  </form>
+<form action="/login" method="POST">
+  <label for="user.email"><h2>Email Address:</h2></label>
+  <input type="email" name="user.email" class="big-text br-8" placeholder="you@somedomain.com" required id="user.email"/>
+  <label for="user.password"><h2>Password:</h2></label>
+  <input type="password" name="user.password"  class="big-text br-8"required id="user.password"/><br/>
+  <input type="hidden" name="return_url" value="{{ return_url }}"/>
+  <a href="/login" type="submit" class="button dark dark-bg-grad shadow-1">Login</a>
+  <a href="/pwrecovery/" class="button dark dark-bg-grad shadow-1">Reset Password</a>
+</form>

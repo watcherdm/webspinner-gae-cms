@@ -72,11 +72,11 @@ class Site(WsModel):
     site.keywords = ['webspinner inc.']
     site.tags = ['cms']
     site.secret = str(random())
-    page = Page.create({"name":["/"],"ancestor":["None"],"title":["Default Webspinner Page"],"menu_name":["Home"],"visible":[True], "page_chain":"/","tags": site.tags})
-    main_theme = Theme.create({"name": ["default"], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css').read()],"js":[]})
+    page = Page.create({"name":["/"],"ancestor":["None"],"title":["Default Webspinner Page"],"menu_name":["Home"],"visible":[True], "page_chain":"/","tags": site.tags}, "Model")
+    main_theme = Theme.create({"name": ["default"], "html":[open('defaults/template.html').read()],"css":[open('defaults/template.css').read()],"js":[]}, "Model")
     page.theme = main_theme
     page.put()
-    theme_packages = ThemePackage.create({"name":["default"],"themes":[",".join([str(main_theme.key())])]})
+    theme_packages = ThemePackage.create({"name":["default"],"themes":[",".join([str(main_theme.key())])]}, "Model")
     site.theme_packages.append(theme_packages.key())
     site.pages.append(page.key())
     site.put()
@@ -141,5 +141,6 @@ class Image(WsModel):
     site = Site.all().get()
     site.images.append(img.key())
     site.put()
+    WsModel.cache.clear();
     return img
 WsModel.Site = Site
