@@ -89,3 +89,18 @@ class Auth():
         'logout' : self.ws.users.create_logout_url(return_url)
       }
       self.render_out("templates/account.html", template_values)
+  
+  class Register(Handler):
+    def get(self):
+      """Return the registration form."""
+
+    def post(self):
+      return_url = self.request.get("return_url")
+      if 'email' not in self.request.arguments() or 'password' not in self.request.arguments():
+        self.json_out({'success': False,'message': 'Required parameter missing.'})
+      if self.request.get('email') == "" or  self.request.get('password') == "":
+        self.json_out({'success': False,'message': 'Please enter your email address and password to login'})
+      tempalte_values = {
+        "user_form" : User.to_form(return_url, mode="add")
+      }
+      self.render_out("templates/register", template_values)

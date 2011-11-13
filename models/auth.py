@@ -21,6 +21,9 @@ class Role(WsModel):
       roles.append(new_role)
     WsModel.cache.add('roles', roles)
     return roles
+  @classmethod
+  def by_name(self, name):
+    return cls.all().filter("name", name).get()
   def add_user(self, user_key):
     self.users.append(user_key);
     self.put()
@@ -39,15 +42,15 @@ class Permission(WsModel):
 
   @classmethod
   def get_for_role(cls, role):
-    return cls.all().filter("role",role).fetch(100)
+    return cls.all().filter("role",role).fetch(1000)
 
   @classmethod
   def get_for_action(cls, action):
-    return cls.all().filter("type", action).fetch(100)
+    return cls.all().filter("type", action).fetch(1000)
 
   @classmethod
   def get_table(cls, page_key = None):
-    roles = Role.all().fetch(100)
+    roles = Role.all().fetch(1000)
     html_out = "<table><tr><td></td>"
     html_out += "".join(["<th>%s</th>" % action for action in ACTIONS])
     html_out += "</tr>"
@@ -122,6 +125,13 @@ class User(WsModel):
     return new_user
 
   @classmethod
+  def register_user(cls, email, password, site_secret, user = None):
+    new_user = cls.create_user(email, password, site_secret, user)
+    user_role = Role.by_name('Anonymous')
+    user_role.add_user(new_user.key())
+    user_role.put()
+
+  @classmethod
   def send_recovery_email(cls, user_email, site_title):
     link = cls.generate_recovery_link(user_email)
     user = User.get_by_email(user_email)
@@ -166,7 +176,8 @@ IAOS.net""" % (user.firstname, user.lastname, link))
       return True
     else:
       return False
-  
+
+
   def set_password(self, password, site_secret):
     """ set_password is a instance method to set the password for a user. If there is no salt currently set it will be generated randomly. """
     if not self.salt:
