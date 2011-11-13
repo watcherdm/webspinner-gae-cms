@@ -22,7 +22,8 @@ ROUTES = [('/admin', Admin.Administrate),
           ('/admin/delete/(.+)\.(html|json)', Admin.DeleteItem),
           ('/admin/download/(.+)', Admin.ExportItem),
           ('/admin/import/(.+)', Admin.ImportItem),
-          ('/admin/set_user_roles/(.*)', Admin.SetUserRoles),
+          ('/admin/set_user_roles/(?P<key>.*)(?:\.)(?P<format>html|json|)', Admin.SetUserRoles),
+          ('/admin/set_user_roles/', Admin.SetUserRoles),
           ('/admin/email(.*)', Admin.EmailContent),
           ('/clearcache', Admin.CacheClear),
           ('/admin/lists/(.+)', Admin.ListJavascript),
@@ -31,6 +32,7 @@ ROUTES = [('/admin', Admin.Administrate),
           ('/login', Auth.Login),
           ('/logout', Auth.Logout),
           ('/account', Auth.Account),
+          ('/register', Auth.Register),
           ('/pwrecovery/(.*)', Auth.UserRecovery),
           ('/images/(.*)/[sbtl]', Resource.ImageHandler),
           ('/util/(.*)/(.*)/(.*)', Utility),
@@ -39,7 +41,7 @@ ROUTES = [('/admin', Admin.Administrate),
 
 
 def main():
-  application = webapp.WSGIApplication(ROUTES, debug=True)
+  application = webapp.WSGIApplication(ROUTES, debug=False)
   wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == "__main__":

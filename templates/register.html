@@ -1,4 +1,13 @@
 <h1>Register</h1>
-<form action="/register" method="post">
-	{{ user_form }}
+<form action="/register?redirect_url=/" method="post">
+	<h2>Register:</h2>
+	<label for="register-email">Email Address : </label>
+	<input type="email" id="register-email" name="register-email"/>
+	<label for="register-password">Password : </label>
+	<input type="password" id="register-password" name="register-password"/>
+	<label for="confirm-password">Confirm : </label>
+	<input type="password" id="confirm-password" name="confirm-password"/>
+	<br/>
+	<br/>
+	<input type="submit" value="Register" class="button dark dark-bg-grad shadow-1"/>
 </form>

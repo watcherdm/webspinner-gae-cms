@@ -100,9 +100,10 @@
 		initialize : function(){
 			this.model.bind('change:loggedin', this.render.bind(this));
 		},
-		on_click : function(){
-			var toggle = this.model.get('loggedin');
-			$.get(this.el.attr('href')).done($.proxy(function(resp){
+		on_click : function(event){
+			var toggle = this.model.get('loggedin'),
+				$target = $(event.target);
+			$.get($target.attr('href')).done($.proxy(function(resp){
 				this.trigger('showform', resp);
 			}, this));
 			return false;

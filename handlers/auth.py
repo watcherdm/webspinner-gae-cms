@@ -93,14 +93,16 @@ class Auth():
   class Register(Handler):
     def get(self):
       """Return the registration form."""
-
-    def post(self):
       return_url = self.request.get("return_url")
-      if 'email' not in self.request.arguments() or 'password' not in self.request.arguments():
-        self.json_out({'success': False,'message': 'Required parameter missing.'})
-      if self.request.get('email') == "" or  self.request.get('password') == "":
-        self.json_out({'success': False,'message': 'Please enter your email address and password to login'})
-      tempalte_values = {
+      template_values = {
         "user_form" : User.to_form(return_url, mode="add")
       }
-      self.render_out("templates/register", template_values)
+      self.render_out("templates/register.html", template_values)
+    def post(self):
+      if 'register-email' not in self.request.arguments() or 'register-password' not in self.request.arguments() or 'confirm-password' not in self.request.arguments():
+        self.json_out({'success': False,'message': 'Required parameter missing.'})
+      if self.request.get('register-email') == "" or  self.request.get('register-password') == "" or  self.request.get('confirm-password') == "" or  self.request.get('confirm-password') != self.request.get('register-password'):
+        self.json_out({'success': False,'message': 'Please enter a valid email address and password to register'})
+      user = self.ws.users.get_current_user(self)
+      wsuser = User.register_user(self.request.get('register-email'), self.request.get('register-password'), self.ws.site.secret, user)
+      self.redirect(self.request.get("return_url"))

@@ -2,7 +2,7 @@ from google.appengine.ext import webapp
 from appengine_utilities import sessions
 from models.site import Site
 from models.auth import User, Role
-from django.utils import simplejson
+import json
 from google.appengine.ext.webapp import template
 from google.appengine.ext import db
 from utility.cache import Cache
@@ -92,6 +92,9 @@ class Webspinner():
     def create_account_url(ws, return_page):
       return "/account?return_url=%s" % return_page
     @classmethod
+    def create_register_url(ws, return_page):
+      return "/register?return_url=%s" % return_page
+    @classmethod
     def create_logout_url(ws, return_page):
       return "/logout?return_url=%s" %return_page
 
@@ -103,9 +106,9 @@ class Handler(webapp.RequestHandler):
     
   def json_out(self, data):
     self.response.headers.add_header("Content-Type","application/json")
-    self.response.out.write(simplejson.dumps(data))
+    self.response.out.write(json.dumps(data))
   def render_json(self, data):
-    return simplejson.dumps(data)
+    return json.dumps(data)
   def render_out(self, template_file, values = {}):
     self.response.out.write(template.render(template_file,values))
   def render_string_out(self, template_object, template_values):

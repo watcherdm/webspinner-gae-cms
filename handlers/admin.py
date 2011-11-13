@@ -1,6 +1,6 @@
 from base_handler import Handler
 from models.page import Content, Page, Section
-from models.auth import User, Role
+from models.auth import User, Role, Permission
 from models.theme import ThemePackage, Theme
 from models.site import  Site, Image
 from google.appengine.ext.webapp import template
@@ -153,14 +153,14 @@ class Admin():
 
   class SetUserRoles(Handler):
     @admin
-    def get(self, args):
-      args = args.split('/')
-      key = args[0].split('?')[0]
+    def get(self, key=None, format=None):
+      logging.info(key)
+      logging.info(format)
       return_url = self.request.get('return_url')
       duser = db.get(key)
       self.response.out.write(duser.create_roles_form(return_url))
     @admin
-    def post(self, args):
+    def post(self):
       user = self.request.get('user')
       role = self.request.get('role')
       return_url = self.request.get('return_url')
@@ -178,9 +178,16 @@ class Admin():
 
   class DeleteItem(Handler):
     @admin
-    def get(self, args):
+    def get(self, args, format):
       type = args.split("/")[0]
       key = args.split("/")[1]
+      model = db.get(key)
+      result = model.delete()
+      self.ws.site.sanity_check()
+      for role in Role.all().fetch(1000):
+        role.sanity_check()
+      for permission in Permission.all().fetch(1000):
+        permission.sanity_check()
       self.response.out.write(type + " : " + key)
 
   class ExportItem(Handler):

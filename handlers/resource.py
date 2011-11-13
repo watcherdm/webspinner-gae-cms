@@ -66,8 +66,6 @@ class Resource():
       admin_html = admin_template.render(context)
       return admin_html
     
-    def generate_user_html(self, page, user):
-      return "test"
     def get(self):
       if self.ws.site is None:
         self.redirect('/install')
@@ -98,14 +96,26 @@ class Resource():
           page.get_or_make_sections()
         user = self.ws.users.get_current_user(self)
         if user:
-          user_control = self.ws.users.create_account_url(path)
-          user_label = "Account"
+          auth = [
+            {
+              "user_control" : self.ws.users.create_account_url(path),
+              "user_label" : "Account"
+            }
+          ]
 
           if self.ws.users.is_current_user_admin(self):
             admin_html = self.generate_admin_html(page, user)
         else:
-          user_control = self.ws.users.create_login_url(path)
-          user_label = "Login"
+          auth = [
+            {
+              "user_control" : self.ws.users.create_register_url(path),
+              "user_label" : "Register"
+            },
+            {
+              "user_control" : self.ws.users.create_login_url(path),
+              "user_label" : "Login"
+            }
+          ]
         page_theme = page.theme
         page_content_template = template.Template(page.build_template())
         sections = page.get_sections()
@@ -113,7 +123,9 @@ class Resource():
         site_users = User.all().fetch(1000)
         for section in sections:
           section_dict[section.name] =  section
-        user_control_link = "<a href='%s' class='account control'>%s</a>" % (user_control, user_label)
+        user_control_link = ""
+        for control in auth:
+          user_control_link += "<a href='%s' class='account control'>%s</a>" % (control['user_control'], control['user_label'])
         page_content_template_values = {
           "site_users": site_users, 
           "ws":self.ws,

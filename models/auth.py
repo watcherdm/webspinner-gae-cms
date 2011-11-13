@@ -22,7 +22,7 @@ class Role(WsModel):
     WsModel.cache.add('roles', roles)
     return roles
   @classmethod
-  def by_name(self, name):
+  def by_name(cls, name):
     return cls.all().filter("name", name).get()
   def add_user(self, user_key):
     self.users.append(user_key);
@@ -129,7 +129,7 @@ class User(WsModel):
     new_user = cls.create_user(email, password, site_secret, user)
     user_role = Role.by_name('Anonymous')
     user_role.add_user(new_user.key())
-    user_role.put()
+    return new_user
 
   @classmethod
   def send_recovery_email(cls, user_email, site_title):
