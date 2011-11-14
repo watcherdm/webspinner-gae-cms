@@ -105,4 +105,4 @@ class Auth():
         self.json_out({'success': False,'message': 'Please enter a valid email address and password to register'})
       user = self.ws.users.get_current_user(self)
       wsuser = User.register_user(self.request.get('register-email'), self.request.get('register-password'), self.ws.site.secret, user)
-      self.redirect(self.request.get("return_url"))
+      self.redirect(self.request.get("return_url") or "/")

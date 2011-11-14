@@ -8,6 +8,7 @@ from google.appengine.api import memcache
 import logging
 from google.appengine.ext import db, deferred
 from utility import user_import
+from utility.cache import Cache
 
 ACTIONS = ['view', 'edit']
 def admin(handler_method):
@@ -96,6 +97,7 @@ class Admin():
             values[k] = self.request.get(k)
           result = cls.create(values)
           if result:
+            memcache.flush_all()
             if format == 'html':
               self.redirect(self.request.get("return_url"))
             elif format == 'json':
@@ -142,6 +144,7 @@ class Admin():
             values[k] = self.request.get_all(k)
           result = cls.update(values)
           if result:
+            memcache.flush_all()
             if format == 'html':
               self.redirect(self.request.get("return_url"))
             elif format == 'json':
@@ -174,6 +177,7 @@ class Admin():
         ur.put()
       drole.users.append(duser.key())
       drole.put()
+      memcache.flush_all()
       self.redirect(return_url)
 
   class DeleteItem(Handler):
@@ -188,6 +192,7 @@ class Admin():
         role.sanity_check()
       for permission in Permission.all().fetch(1000):
         permission.sanity_check()
+      memcache.flush_all()
       self.response.out.write(type + " : " + key)
 
   class ExportItem(Handler):

@@ -60,25 +60,17 @@ class Permission(WsModel):
       page = {}
     for role in roles:
       html_out += "<tr><th>%s</th>" % role.name
+      checked = " "
       for perm in cls.get_for_role(role):
         checked = perm.key() in page.permissions if page else False
         checked = "checked" if checked else " "
-        html_out += "<td><input type='checkbox' name='page.permissions' id='page.permissions' value='%s' %s /></td>" % (perm.key(), checked)
+        html_out += "<td><input type='checkbox' name='permissions' value='%s' %s /></td>" % (perm.key(), checked)
       html_out += "</tr>"
     html_out += "</table>"
     return html_out
 
 class User(WsModel):
   """ User contains the user information necessary to login as well as profile data"""
-  _modfields = [{'name':"email", 'type':"email"},
-    {'name':"firstname",'type':"text"},
-    {"name":"lastname","type":"text"},
-    {"name":"spouse","type":"text"},
-    {"name":"address","type":"textarea"},
-    {"name":"phone","type":"tel"},
-    {"name":"fax","type":"tel"},
-    {"name":"url","type":"url"},
-    {"name":"tags","type":"textlist"}]
   oauth = WsModel.db.UserProperty()
   email = WsModel.db.EmailProperty()
   password = WsModel.db.StringProperty()
@@ -93,6 +85,18 @@ class User(WsModel):
   url = WsModel.db.LinkProperty()
   picture = WsModel.db.BlobProperty()
   tags = WsModel.db.StringListProperty()
+
+  @classmethod
+  def relations(cls):
+    return WsModel.Relation([], [{'name':"email", 'type':"email"},
+      {'name':"firstname",'type':"text"},
+      {"name":"lastname","type":"text"},
+      {"name":"spouse","type":"text"},
+      {"name":"address","type":"textarea"},
+      {"name":"phone","type":"tel"},
+      {"name":"fax","type":"tel"},
+      {"name":"url","type":"url"},
+      {"name":"tags","type":"textlist"}])
 
   @classmethod
   def get_by_email(cls, email):

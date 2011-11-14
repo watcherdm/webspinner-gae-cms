@@ -14,19 +14,10 @@ def string_to_tags(site, tags):
   site.put()
   return result
 
+
 class Page(WsModel):
   """ Page is a wrapper class for each logical page in the cms website
   """
-  _relfields = [{"model":"Site","field":"pages","value":"key"}]
-  _modfields = [{"name":"name","type":"text"},
-    {"name":"ancestor","type":"select","list":"Page","list_val":"key","list_name":"title"},
-    {"name":"title","type":"text"},
-    {"name":"menu_name","type":"text"},
-    {"name":"visible","type":"checkbox"},
-    {"name":"tags","type":"textlist"},
-    {"name":"keywords","type":"textlist"},
-    {"name":"description","type":"textarea"},
-  ]
   name = WsModel.db.StringProperty()
   ancestor = WsModel.db.SelfReferenceProperty()
   title = WsModel.db.StringProperty()
@@ -39,6 +30,18 @@ class Page(WsModel):
   visible = WsModel.db.BooleanProperty()
   tags = WsModel.db.StringListProperty()
   page_chain = WsModel.db.StringListProperty()
+
+  @classmethod
+  def relations(cls):
+    return WsModel.Relation([{"model":"Site","field":"pages","value":"key"}],[{"name":"name","type":"text"},
+      {"name":"ancestor","type":"select","list":cls,"list_val":"key","list_name":"title"},
+      {"name":"title","type":"text"},
+      {"name":"menu_name","type":"text"},
+      {"name":"visible","type":"checkbox"},
+      {"name":"tags","type":"textlist"},
+      {"name":"keywords","type":"textlist"},
+      {"name":"description","type":"textarea"},
+    ])
 
   @classmethod
   def get_by_name(cls, name):
@@ -90,17 +93,18 @@ WsModel.Page = Page
 class Section(WsModel):
   """ Section is a wrapper class for the each logical section in a page.
   """
-  _relfields = [{"model":"Page","field":"sections","value":"key"}]
-  _modfields = [{"name":"name","type":"text"},
-    {"name":"theme","type":"select","list":"Theme","list_val":"key","list_name":"name"},
-    {"name":"visible","type":"checkbox"},
-    {"name":"tags","type":"textlist"}]
   name = WsModel.db.StringProperty()
   theme = WsModel.db.ReferenceProperty(Theme)
   permissions = WsModel.db.ListProperty(WsModel.db.Key)
   visible = WsModel.db.BooleanProperty()
   contents = WsModel.db.ListProperty(WsModel.db.Key)
   tags = WsModel.db.StringListProperty()
+  @classmethod
+  def relations(cls):
+    return WsModel.Relation([{"model":"Page","field":"sections","value":"key"}],[{"name":"name","type":"text"},
+      {"name":"theme","type":"select","list":Theme,"list_val":"key","list_name":"name"},
+      {"name":"visible","type":"checkbox"},
+      {"name":"tags","type":"textlist"}])
   @classmethod
   def create(cls, dict_values):
     section = cls()
@@ -154,12 +158,6 @@ WsModel.Section = Section
 class Content(WsModel):
   """ Content is a wrapper class for the content elements in a section.
   """
-  _relfields = [{"model": "Section","field":"contents","value":"key","method":"add_content"}]
-  _modfields = [{"name":"title","type":"text"},
-    {"name":"abstract","type":"textarea"},
-    {"name":"content","type":"textareahtml"},
-    {"name":"visible","type":"checkbox"},
-    {"name":"tags","type":"textlist"}]
   title = WsModel.db.StringProperty()
   abstract = WsModel.db.StringProperty()
   content = WsModel.db.TextProperty()
@@ -169,4 +167,12 @@ class Content(WsModel):
   created_by_user = WsModel.db.ReferenceProperty(User)
   visible = WsModel.db.BooleanProperty()
   tags = WsModel.db.StringListProperty()
+  
+  @classmethod
+  def relations(cls):
+    return WsModel.Relation([{"model": "Section","field":"contents","value":"key","method":"add_content"}],[{"name":"title","type":"text"},
+      {"name":"abstract","type":"textarea"},
+      {"name":"content","type":"textareahtml"},
+      {"name":"visible","type":"checkbox"},
+      {"name":"tags","type":"textlist"}])
 WsModel.Content = Content

@@ -42,14 +42,21 @@ def to_dict(model, ignore = []):
   return output
 
 class WsModel(ROTModel):
-  _relfields = []
-  _modfields = []
+  class Relation():
+    _relfields = []
+    _modfields = []
+
+    def __init__(self, relfields=[], modfields=[]):
+      self._relfields = relfields
+      self._modfields = modfields
   @classmethod
   def update(cls, dict_values, responsetype = 'Model'):
     if "key" in dict_values:
       model = db.get("".join(dict_values["key"]))
       for key, property in model.properties().iteritems():
+        logging.info('Modifying property : ' + key)
         if key in dict_values:
+          logging.info(key + ' in values')
           fitype = property.__class__.__str__(property)
           if ".StringListProperty" in fitype:
             dict_values[key] = [x.lstrip().rstrip() for x in "".join(dict_values[key]).split(",")]
@@ -64,25 +71,25 @@ class WsModel(ROTModel):
           if dict_values[key]:
             setattr(model, key, dict_values[key])
       model.put()
-      if len(model._relfields) > 0:
-        name = "edit_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
+      relations = model.__class__.relations()
+      if len(relations._relfields) > 0:
+        name = "edit_" + relations._relfields[0]["model"].lower() + "-" + relations._relfields[0]["value"].lower()
         if name in dict_values:
-          if model._relfields[0]["model"]:
-            model_to = getattr( WsModel, model._relfields[0]["model"])
+          if relations._relfields[0]["model"]:
+            model_to = getattr( WsModel, relations._relfields[0]["model"])
             if model_to:
               model_to = db.get(dict_values[name])
               if model_to and len(model_to) > 0:
-                if model._relfields[0]["field"] in model_to[0].properties():
-                  if ".ListProperty" in model_to[0].properties()[model._relfields[0]["field"]].__str__():
-                    list_model_keys = getattr(model_to[0], model._relfields[0]["field"])
+                if relations._relfields[0]["field"] in model_to[0].properties():
+                  if ".ListProperty" in model_to[0].properties()[relations._relfields[0]["field"]].__str__():
+                    list_model_keys = getattr(model_to[0], relations._relfields[0]["field"])
                     list_model_keys.append(model.key())
                     list_model_keys = list(set(list_model_keys))
-                    setattr(model_to[0], model._relfields[0]["field"], list_model_keys)
+                    setattr(model_to[0], relations._relfields[0]["field"], list_model_keys)
                   else:
-                    setattr(model_to[0], model._relfields[0]["field"], model)
+                    setattr(model_to[0], relations._relfields[0]["field"], model)
                   model_to[0].put()
-      if(cls.__name__ == "Page"):
-        WsModel.cache.clear()
+      WsModel.cache.clear()
       if responsetype == 'Model':
         return model
       elif responsetype == 'Dict':
@@ -91,6 +98,10 @@ class WsModel(ROTModel):
         return True
     else:
       return None
+
+  @classmethod
+  def relations(cls):
+    return cls.Relation()
 
   @classmethod
   def create(cls, dict_values, responsetype = 'Model'):
@@ -113,24 +124,25 @@ class WsModel(ROTModel):
           dict_values[key] = "".join(dict_values[key])
         setattr(model, key, dict_values[key])
     model.put()
-    if len(model._relfields) > 0:
-      name = "add_" + model._relfields[0]["model"].lower() + "-" + model._relfields[0]["value"].lower()
+    relations = model.__class__.relations()
+    if len(relations._relfields) > 0:
+      name = "add_" + relations._relfields[0]["model"].lower() + "-" + relations._relfields[0]["value"].lower()
       if name in dict_values:
-        if getattr( WsModel, model._relfields[0]["model"]):
+        if getattr( WsModel, relations._relfields[0]["model"]):
           model_to = db.get(dict_values[name])
           logging.info('Model retrieved for key %s : %s' % (dict_values[name], model_to.__str__()))
           if model_to:
-            if model._relfields[0]["field"] in model_to.properties():
-              if ".ListProperty" in model_to.properties()[model._relfields[0]["field"]].__str__():
-                list_model_keys = getattr(model_to, model._relfields[0]["field"])
+            if relations._relfields[0]["field"] in model_to.properties():
+              if ".ListProperty" in model_to.properties()[relations._relfields[0]["field"]].__str__():
+                list_model_keys = getattr(model_to, relations._relfields[0]["field"])
                 list_model_keys.append(model.key())
                 list_model_keys = list(set(list_model_keys))
-                setattr(model_to, model._relfields[0]["field"], list_model_keys)
+                setattr(model_to, relations._relfields[0]["field"], list_model_keys)
               else:
-                setattr(model_to, model._relfields[0]["field"], model)
+                setattr(model_to, relations._relfields[0]["field"], model)
               model_to.put()
         else:
-          logging.info('Model type %s not found in globals' % model._relfields[0]['model'])
+          logging.info('Model type %s not found in globals' % relations._relfields[0]['model'])
     
     if(cls.__name__ == "Page"):
       WsModel.cache.clear()
@@ -166,11 +178,12 @@ class WsModel(ROTModel):
     else:
       model = cls()
       html_out += "<form action='/admin/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
-    if rel_key and len(model._relfields) > 0:
-      model_name = model._relfields[0]["model"].lower()
-      name = mode + '_' + model_name + "-" + model._relfields[0]["value"].lower()
+    relations = model.__class__().relations()
+    if rel_key and len(relations._relfields) > 0:
+      model_name = relations._relfields[0]["model"].lower()
+      name = mode + '_' + model_name + "-" + relations._relfields[0]["value"].lower()
       html_out += "<input type='hidden' value='%s' name='%s' id='%s' />" % (rel_key, name, name)
-    for field in model._modfields:
+    for field in relations._modfields:
       key = field["name"]
       type = field["type"]
       if key in model.properties():
@@ -190,33 +203,31 @@ class WsModel(ROTModel):
           html_out += "<textarea name='%s' id='%s' class='%s'>%s</textarea>" % (finame,finame, wysiwyg_plugin, value)
         elif type == "select":
           if "list" in field:
-            if field["list"] in globals():
-              object_type = globals()[field["list"]]
-              objects = object_type.all().fetch(1000)
-              def build_option(object):
-                if model.is_saved():
-                  if object.key() == model.key():
-                    return ""
-                in_val = ""
-                if field["list_val"] == "key":
-                  selected = " selected " if object == value else ""
-                  in_val = object.key()
-                else:
-                  selected = " selected " if getattr(object, field["list_val"]) == value else ""
-                  in_val = getattr(object, field["list_val"])
-                option_out = "<option value='%s' %s>%s</option>" % (in_val, selected, getattr(object, field["list_name"]))
-                return option_out
-              if field["list_name"] in object_type.properties():
-                html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "<option value='None'>-- None --</option>" + "".join(map(build_option, objects)))
+            object_type = field["list"]
+            objects = object_type.all().fetch(1000)
+            def build_option(object):
+              if model.is_saved():
+                if object.key() == model.key():
+                  return ""
+              in_val = ""
+              if field["list_val"] == "key":
+                selected = " selected " if object == value else ""
+                in_val = object.key()
               else:
-                html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, ["<option value='%s'>%s</option>" % (object.key(), object.key().id()) for object in objects])
+                selected = " selected " if getattr(object, field["list_val"]) == value else ""
+                in_val = getattr(object, field["list_val"])
+              option_out = "<option value='%s' %s>%s</option>" % (in_val, selected, getattr(object, field["list_name"]))
+              return option_out
+            if field["list_name"] in object_type.properties():
+              html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "<option value='None'>-- None --</option>" + "".join(map(build_option, objects)))
             else:
-              html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, "".join(["<option value='%s'>%s</option>" % (x, x) for x in value.split(",")]))
+              html_out += "<select name='%s' id='%s'>%s</select>" % (finame, finame, ["<option value='%s'>%s</option>" % (object.key(), object.key().id()) for object in objects])
+            
         elif type == "checkbox":
           checked = " checked " if value else ""
           html_out += "<input type='%s' name='%s' id='%s' %s />" % (type, finame, finame, checked)
         else:
-          html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % (model._modfields[key], finame, finame, value)
+          html_out += "<input type='%s' id='%s' name='%s' value='%s' />" % (relations._modfields[key], finame, finame, value)
       html_out += "<br />"
     html_out += "<input type='submit' name='%s.submit' id='%s.submit' value='Save' /></form>" % (cls.__name__.lower(), cls.__name__.lower())
     return html_out
