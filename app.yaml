@@ -1,7 +1,8 @@
 application: iaos-web
-version: 1-3
+version: 1-4
 runtime: python
 api_version: 1
+threadsafe: false
 
 handlers:
 

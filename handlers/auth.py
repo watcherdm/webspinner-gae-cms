@@ -1,7 +1,10 @@
 from base_handler import Handler
-from models.auth import VerificationToken, User
+from models.auth import VerificationToken, User, Role
 from models.site import Site
+from models.page import Content
 from google.appengine.ext.webapp import template
+from utility import email_notifier
+
 class Auth():
   class UserRecovery(Handler):
     def get(self, code = False):
@@ -91,6 +94,20 @@ class Auth():
       self.render_out("templates/account.html", template_values)
   
   class Register(Handler):
+    def create_admin_content(self):
+      admin_content = Content()
+      admin_content.title = "New User Registration " + self.ws.site.title
+      admin_content.content = template.render('defaults/admin/admin_notify.html',{
+        "site" : self.ws.site
+      })
+      return admin_content
+    def create_user_content(self):
+      content = Content()
+      content.title = "Registration Confirmation :: " + self.ws.site.title
+      content.content = template.render('defaults/register_notify.html', {
+        "site" : self.ws.site
+      })
+      return content
     def get(self):
       """Return the registration form."""
       return_url = self.request.get("return_url")
@@ -105,4 +122,6 @@ class Auth():
         self.json_out({'success': False,'message': 'Please enter a valid email address and password to register'})
       user = self.ws.users.get_current_user(self)
       wsuser = User.register_user(self.request.get('register-email'), self.request.get('register-password'), self.ws.site.secret, user)
+      email_notifier.EmailNotifier.notify(Role.get_administrators(), 'admin@iaos.net', self.create_admin_content())
+      email_notifier.EmailNotifier.notify([wsuser], 'admin@iaos.net', self.create_user_content())
       self.redirect(self.request.get("return_url") or "/")

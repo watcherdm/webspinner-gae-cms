@@ -6,8 +6,7 @@ from models.site import  Site, Image
 from google.appengine.ext.webapp import template
 from google.appengine.api import memcache
 import logging
-from google.appengine.ext import db, deferred
-from utility import user_import
+from utility import user_import, email_notifier
 from utility.cache import Cache
 
 ACTIONS = ['view', 'edit']
@@ -205,23 +204,15 @@ class Admin():
   class EmailContent(Handler):
     @admin
     def post(self, *args):
-      from google.appengine.api import mail
-      import html2text
-      # TODO: get a template together for email content and inject safe content into it.
       content = db.get(self.request.get('content'))
       role = db.get(self.request.get('role'))
       mailusers = db.get(role.users)
-      for mailuser in mailusers:
-        deferred.defer(mail.send_mail, sender = "IAOS Website <info@iaos.net>",
-          to="%s %s <%s>" % (mailuser.firstname, mailuser.lastname, mailuser.email),
-          subject="%s" % content.title,
-          html="%s" % content.content,
-          body="%s" % html2text.html2text(content.content, baseurl="http://www.iaos.net/"))
-      self.response.out.write("""BODY : %s
-      HTML : %s
-      SUBJECT : %s""" % ())
-      self.response.out.write("""Emails scheduled successfully.""")
-    
+      result = email_notifier.notify(to = mailusers, content = content)
+      if result:
+        self.response.redirect('/email/success')
+      else:
+        self.response.redirect('/email/failure')
+
   class ImportItem(Handler):
     @admin
     def post(self, type):

@@ -2,7 +2,7 @@ from google.appengine.ext import webapp
 from appengine_utilities import sessions
 from models.site import Site
 from models.auth import User, Role
-import json
+from django.utils import simplejson as json
 from google.appengine.ext.webapp import template
 from google.appengine.ext import db
 from utility.cache import Cache

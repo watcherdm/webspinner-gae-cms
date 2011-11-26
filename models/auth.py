@@ -34,6 +34,10 @@ class Role(WsModel):
     adminrole = cls.all().filter("name","Administrator").get()
     adminrole.users.append(user.key())
     adminrole.put()
+  @classmethod
+  def get_administrators(cls):
+    adminrole = cls.all().filter("name", "Administrator").get()
+    return WsModel.db.get(adminrole.users)
 
 class Permission(WsModel):
   """ Permission assigns an action type with a role and is used in content elements to associate a user with the actions he can take"""
