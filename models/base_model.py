@@ -170,14 +170,14 @@ class WsModel(ROTModel):
     return html_out
 
   @classmethod
-  def to_form(cls, return_url = "/", mode = "add", model_key = None, rel_key = None):
+  def to_form(cls, return_url = "/", mode = "add", model_key = None, rel_key = None, admin = True):
     html_out = ""
     if model_key:
       model = cls.get(model_key)
-      html_out += "<form action='/admin/%s/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), model_key, return_url)
+      html_out += "<form action='/%s%s/%s/%s.html?return_url=%s' method='post'>" % ("admin/" if admin else "", mode, cls.__name__.lower(), model_key, return_url)
     else:
       model = cls()
-      html_out += "<form action='/admin/%s/%s.html?return_url=%s' method='post'>" % (mode, cls.__name__.lower(), return_url)
+      html_out += "<form action='/%s%s/%s.html?return_url=%s' method='post'>" % ("admin/" if admin else "", mode, cls.__name__.lower(), return_url)
     relations = model.__class__().relations()
     if rel_key and len(relations._relfields) > 0:
       model_name = relations._relfields[0]["model"].lower()

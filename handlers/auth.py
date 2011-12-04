@@ -4,6 +4,7 @@ from models.site import Site
 from models.page import Content
 from google.appengine.ext.webapp import template
 from utility import email_notifier
+import logging
 
 class Auth():
   class UserRecovery(Handler):
@@ -88,11 +89,46 @@ class Auth():
       model_key = self.session['user']
       template_values = {
         'return_url': return_url, 
-        'account_edit' : User.to_form(return_url, mode ="edit", model_key = model_key),
+        'account_edit' : User.to_form(return_url, mode ="account", model_key = model_key, admin = False),
         'logout' : self.ws.users.create_logout_url(return_url)
       }
       self.render_out("templates/account.html", template_values)
-  
+    def post(self, id, format):
+      return_url = self.request.get("return_url")
+      model_key = self.session['user']
+
+      user = User.db.get(id)
+      wsuser = self.ws.users.get_current_user(self);
+
+      user_match = ((user.email == wsuser.email) and (user.password == wsuser.password))
+      
+      cls = User
+      values = {}
+      values["key"] = id
+
+      for k in self.request.arguments():
+        logging.info(k)
+        value = self.request.get_all(k)
+        logging.info(value)
+        if k.split('-')[-1] in cls().properties().keys():
+          if ".ListProperty" in cls().properties()[k.split('-')[-1]].__class__.__str__(""):
+            if k.split("-")[-1] == "permissions":
+              values[k.split('-')[-1]] = self.request.get_all(k)
+            else:
+              values[k.split('-')[-1]] = [x.lstrip().rstrip() for x in value.split(",")]
+          else:
+            values[k.split('-')[-1]] = value
+        values[k] = self.request.get_all(k)
+      result = cls.update(values)
+      if result:
+        User.memcache.flush_all()
+        if format == 'html':
+          self.redirect(self.request.get("return_url"))
+        elif format == 'json':
+          self.json_out(result)
+      else:
+        self.response.out.write("Failed to update")
+      
   class Register(Handler):
     def create_admin_content(self):
       admin_content = Content()
