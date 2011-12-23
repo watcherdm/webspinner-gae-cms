@@ -1,9 +1,9 @@
-<form action="/login" method="POST">
+<form action="/login" id="login_form" method="POST">
   <label for="user.email"><h2>Email Address:</h2></label>
   <input type="email" name="user.email" class="big-text br-8" placeholder="you@somedomain.com" required id="user.email"/>
   <label for="user.password"><h2>Password:</h2></label>
-  <input type="password" name="user.password"  class="big-text br-8"required id="user.password"/><br/>
+  <input type="password" name="user.password"  class="big-text br-8" required id="user.password"/><br/>
   <input type="hidden" name="return_url" value="{{ return_url }}"/>
-  <a href="/login" type="submit" class="button dark dark-bg-grad shadow-1">Login</a>
-  <a href="/pwrecovery/" class="button dark dark-bg-grad shadow-1">Reset Password</a>
+  <a href="/login" type="submit" class="button dark dark-bg-grad shadow-1 login">Login</a>
+  <a href="/pwrecovery/" class="button dark dark-bg-grad shadow-1 reset">Reset Password</a>
 </form>

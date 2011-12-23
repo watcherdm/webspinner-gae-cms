@@ -20,7 +20,14 @@ $(function(){
     result:"div.user_edit>div.data",
     callback: function(){$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");}
   });
-  $("textarea.tinymce").tinymce({script_url:"/addons/tiny_mce/tiny_mce.js",theme:"advanced", plugins:"fullscreen, template", external_image_list_url : "/admin/lists/images"});
+  $("textarea.tinymce").tinymce({ 
+    width : 630,
+    height : 300,
+    script_url:"/addons/tiny_mce/tiny_mce.js",
+    theme:"advanced", 
+    plugins:"fullscreen, template", 
+    external_image_list_url : "/admin/lists/images"
+  });
   $("textarea.tinymce").each(function(){
     var $ta = $(this);
     $ta.parent("form").bind("submit", 

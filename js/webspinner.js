@@ -18,6 +18,15 @@
 
 		}
 	}()));
+	webspinner.ns('console');
+	webspinner.console.load('log', function(msg){
+		try{
+			console.log(msg);
+		}catch(e){
+			return;
+		}
+	});
+	var console = webspinner.console;
 	webspinner.ns('ui');
 	webspinner.ui.load('Modal', Backbone.View.extend({
 		events : {
@@ -127,6 +136,21 @@
 		});
 		webspinner.account.controls.button.bind('showform', function(data){
 			webspinner.ui.modal.show(data);
+		});
+		$("body").delegate('#login_form input', 'keyup', function(event){
+			// detect enter and escape and handle them as cancel and submit
+			var keymap = {
+				'13' : function(){
+					$('#login_form .login').click();
+				},
+				'27' : function(){
+					webspinner.ui.modal.hide();
+				}
+			}
+			if ( keymap.hasOwnProperty(event.keyCode)){
+				keymap[event.keyCode]();
+				return false;
+			}
 		});
 	}
 	$(webspinner.bootstrap);

@@ -42,6 +42,8 @@ $(function(){
 			}
 		});
 	$("textarea.tinymce").tinymce({
+		width : 600,
+		height : 600,
 		script_url:"/addons/tiny_mce/tiny_mce.js",
 		theme:"advanced", 
 		plugins:"fullscreen, template", 
