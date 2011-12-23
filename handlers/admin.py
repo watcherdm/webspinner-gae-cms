@@ -5,6 +5,7 @@ from models.theme import ThemePackage, Theme
 from models.site import  Site, Image
 from google.appengine.ext.webapp import template
 from google.appengine.api import memcache
+from google.appengine.ext import db
 import logging
 from utility import user_import, email_notifier
 from utility.cache import Cache
