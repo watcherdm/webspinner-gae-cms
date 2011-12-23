@@ -121,6 +121,9 @@ class Handler(webapp.RequestHandler):
     perms = db.get(page.permissions)
     anonrole = Role.all().filter("name", "Anonymous").get()
     if perms:
+      for perm in perms:
+        if perm.role.name == "Anonymous":
+          return True
       user = self.ws.users.get_current_user(self)
       if not user:
         return False

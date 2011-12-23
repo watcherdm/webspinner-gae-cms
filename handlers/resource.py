@@ -85,7 +85,7 @@ class Resource():
         return False
       if not self.permission_check(page):
         self.error(403)
-        self.redirect(self.ws.users.create_login_url(path))
+        self.redirect('/')
         return False
       admin_html = ""
       if page:
