@@ -33,8 +33,8 @@
 	</span>
 	{% for section in sections %}
 		<span class="admin_tab sections dark-bg-grad">
-			<span class="icon" ></span>
-			{{ section.name }}
+			<span class="icon" title="{{ section.name }}" ></span>
+			Edit Section
 			<div class="admin tabcontent dark-bg-grad default section_theme_html">
 				<form action="/admin/edit/theme/{{ section.theme_key }}.html?return_url={{ path }}" method="POST">
 					<textarea name="section.theme.html" id="section.theme.html">{{ section.theme_html }}</textarea>
@@ -46,8 +46,8 @@
 		</span>
 		{% for content in section.content %}
 		<span class="admin_tab dark-bg-grad contents">
-			<span class="icon" ></span>
-			{{ content.title }}
+			<span class="icon" title="{{ content.title }}"></span>
+			Edit Content 
 			<div class="admin content_edit">
 				<div class="tab_strip">
 					<span class="data_tab tab dark-bg-grad">List</span>
