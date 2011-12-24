@@ -20,6 +20,12 @@ $(function(){
     result:"div.user_edit>div.data",
     callback: function(){$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");}
   });
+  $("div.emails .admin.email").ajax_edit({
+    result:"div.emails .email_blast_result",
+    callback:function(){
+      nsjs.webspinner.console.log(arguments);
+    }
+  });
   $("textarea.tinymce").tinymce({ 
     width : 630,
     height : 300,

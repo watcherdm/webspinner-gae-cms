@@ -26,11 +26,26 @@ class Resource():
         self.response.headers.add_header("Content-Type","text/css")
         self.response.out.write(page.theme.css)
 
+  class StaticHandler(Handler):
+    def get(self, filename):
+      try:
+        self.response.headers.add_header("Content-Type", "text/html")
+        self.response.out.write(open('public/'+filename).read())
+      except :
+        self.error(404);
+        self.response.out.write(open('error/404.html').read())
 
   class PageHandler(Handler):
     def generate_admin_html(self, page, user):
       contents = Content.all().fetch(1000)
       roles = Role.all().fetch(1000)
+      emaildata = {
+        "contents":contents, 
+        "roles":roles        
+      }
+      emailcontext = template.Context(emaildata)
+      email_template = template.Template(open("templates/email.html").read())
+      email_html = email_template.render(emailcontext)
       admindata = {
         "page_edit" : Page.to_form(self.request.path, "edit", page.key()), 
         "theme_edit" : Theme.to_form(self.request.path, "edit", page.theme.key(), page.key()), 
@@ -58,8 +73,7 @@ class Resource():
         "user_edit_form" : User.to_form(self.request.path, "edit", user.key() ),
         "user_import" : open('defaults/admin/user_import.html').read(),
         "images" : self.ws.site.images_for_use(),
-        "contents":contents, 
-        "roles":roles
+        "email_blast" : email_html
       }
       context = template.Context(admindata)
       admin_template = template.Template(open("defaults/admin/tabs.html").read())

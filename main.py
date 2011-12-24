@@ -37,6 +37,7 @@ ROUTES = [('/admin', Admin.Administrate),
           ('/pwrecovery/(.*)', Auth.UserRecovery),
           ('/images/(.*)/[sbtl]', Resource.ImageHandler),
           ('/util/(.*)/(.*)/(.*)', Utility),
+          ('/static/(.*)', Resource.StaticHandler),
           ('/(.*)css', Resource.CssHandler),
           ('/.*', Resource.PageHandler),]
 

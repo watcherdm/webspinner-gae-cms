@@ -41,6 +41,7 @@ $(function(){
 				$("div.user_edit>div.tab_strip>span.data_tab").trigger("click");
 			}
 		});
+	
 	$("textarea.tinymce").tinymce({
 		width : 600,
 		height : 600,
@@ -125,16 +126,16 @@ $(function(){
 				this._build();
 			},
 			_build: function(){
-				var object = this;
+				var obj = this;
 				this.$elem.click(function(){
 					$.get($(this).attr("href"), function(data){
-						$(object.options.result)
+						$(obj.options.result)
 							.html(data);
-						$(object.options.result)
+						$(obj.options.result)
 							.show();
 					});
 					if(typeof object.options.callback === "function"){
-						object.options.callback.apply(this);
+						obj.options.callback.apply(this);
 					}
 					return false;
 				})

@@ -208,11 +208,11 @@ class Admin():
       content = db.get(self.request.get('content'))
       role = db.get(self.request.get('role'))
       mailusers = db.get(role.users)
-      result = email_notifier.notify(to = mailusers, content = content)
+      result = email_notifier.EmailNotifier.notify(to = mailusers, sender='admin@iaos.net', content = content)
       if result:
-        self.response.redirect('/email/success')
+        self.redirect('/')
       else:
-        self.response.redirect('/email/failure')
+        self.redirect('/admin/email/failure')
 
   class ImportItem(Handler):
     @admin
