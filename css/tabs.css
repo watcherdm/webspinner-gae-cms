@@ -119,3 +119,7 @@ div.contained {
 .admin_tools .emails .icon {
 	background-image : url('/icons/email.png');
 }
+.admin_tools .emails .email_contents {
+	overflow : auto;
+	height : 480px;
+}
